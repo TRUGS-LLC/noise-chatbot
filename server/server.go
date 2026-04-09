@@ -15,13 +15,34 @@ import (
 	"github.com/google/uuid"
 )
 
-// ChatHandler is the simple text chat callback.
+// ResponseNode is a pre-authored response in the TRUG. The LLM picks one.
+// The LLM never composes text — every word the user sees was written by a human.
+type ResponseNode struct {
+	ID       string `json:"id"`
+	Keywords []string `json:"keywords"` // matching keywords for classification
+	Response string `json:"response"` // the exact text returned to the user
+}
+
+// Classifier picks one or more ResponseNode IDs given user text and available nodes.
+// The LLM implements this — it reads the question, picks the best matching node IDs.
+// It NEVER generates the response text. It only returns node IDs.
+// Multiple IDs = multiple response nodes concatenated in order.
+type Classifier func(userText string, nodes []ResponseNode) []string
+
+// ChatHandler is the simple text chat callback (legacy — allows free text).
+// DEPRECATED: Use WithResponses + WithClassifier for safe template-only responses.
 type ChatHandler func(text string) string
 
 // MessageHandler is the full message callback.
 type MessageHandler func(msg protocol.Message) protocol.Message
 
 // Server is an encrypted chatbot server using Noise_IK.
+//
+// Two modes:
+//   - Template mode (safe): LLM classifies user input → picks a ResponseNode → returns verbatim text
+//   - Handler mode (legacy): OnChat callback returns arbitrary text — LLM can compose (unsafe)
+//
+// Template mode is the default when WithResponses is used. The LLM never touches the output.
 type Server struct {
 	addr         string
 	key          noise.DHKey
@@ -31,9 +52,14 @@ type Server struct {
 	llmConfig    *LLMConfig
 	upstreamAddr string
 	upstreamKey  string
+
+	// Template-only mode — LLM classifies, never composes
+	responses    []ResponseNode
+	classifier   Classifier
+	noMatchText  string // returned when classifier finds no match
 }
 
-// LLMConfig configures an LLM provider for chat responses.
+// LLMConfig configures an LLM provider for classification.
 type LLMConfig struct {
 	Provider  string // "anthropic" or "openai"
 	Model     string
@@ -43,10 +69,102 @@ type LLMConfig struct {
 // New creates a new Noise Chatbot server.
 func New(addr string) *Server {
 	key, _ := noise.GenerateKeypair()
-	return &Server{addr: addr, key: key}
+	return &Server{
+		addr:        addr,
+		key:         key,
+		noMatchText: "I don't have information about that. Please contact us directly.",
+	}
 }
 
-// OnChat sets a simple text chat handler.
+// WithResponses loads pre-authored response nodes. The LLM picks from these —
+// it never generates text. Every word the user sees was written by a human.
+//
+// This is the safe mode. Use this instead of OnChat.
+func (s *Server) WithResponses(nodes []ResponseNode) *Server {
+	s.responses = nodes
+	return s
+}
+
+// WithResponsesFromTRUG loads response nodes from a .trug.json file.
+// Each node with a "response" property becomes a ResponseNode.
+// Keywords are extracted from the "keywords" property (array of strings)
+// or generated from the node name and description.
+func (s *Server) WithResponsesFromTRUG(path string) *Server {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("warning: could not load TRUG %s: %v", path, err)
+		return s
+	}
+	var trug struct {
+		Nodes []struct {
+			ID         string         `json:"id"`
+			Properties map[string]any `json:"properties"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal(data, &trug); err != nil {
+		log.Printf("warning: could not parse TRUG %s: %v", path, err)
+		return s
+	}
+
+	var nodes []ResponseNode
+	for _, n := range trug.Nodes {
+		response, _ := n.Properties["response"].(string)
+		if response == "" {
+			// Fall back to description
+			response, _ = n.Properties["description"].(string)
+		}
+		if response == "" {
+			continue // skip nodes without response text
+		}
+
+		var keywords []string
+		if kw, ok := n.Properties["keywords"].([]any); ok {
+			for _, k := range kw {
+				if s, ok := k.(string); ok {
+					keywords = append(keywords, s)
+				}
+			}
+		}
+		// Add name as keyword
+		if name, ok := n.Properties["name"].(string); ok && name != "" {
+			keywords = append(keywords, name)
+		}
+
+		nodes = append(nodes, ResponseNode{
+			ID:       n.ID,
+			Keywords: keywords,
+			Response: response,
+		})
+	}
+
+	s.responses = nodes
+	log.Printf("Loaded %d response nodes from %s", len(nodes), path)
+	return s
+}
+
+// WithClassifier sets a custom classifier function. The classifier receives
+// the user's text and the available response nodes. It returns the ID of the
+// best matching node, or "" if no match.
+//
+// The classifier ONLY picks a node ID. It never generates response text.
+// The default classifier does keyword matching. Replace with an LLM classifier
+// for intelligent matching.
+func (s *Server) WithClassifier(classifier Classifier) *Server {
+	s.classifier = classifier
+	return s
+}
+
+// WithNoMatch sets the response text when no node matches the user's question.
+// This text is authored by the human, not generated by the LLM.
+func (s *Server) WithNoMatch(text string) *Server {
+	s.noMatchText = text
+	return s
+}
+
+// OnChat sets a simple text chat handler (legacy mode).
+// DEPRECATED: This allows the handler to return arbitrary text, which means
+// an LLM could generate hallucinated responses. Use WithResponses + WithClassifier
+// for safe template-only responses where the LLM classifies but never composes.
 func (s *Server) OnChat(handler ChatHandler) *Server {
 	s.chatHandler = handler
 	return s
@@ -71,9 +189,8 @@ func (s *Server) WithTRUG(path string) *Server {
 	return s
 }
 
-// WithLLM configures an LLM provider. In v0.1.0, this stores the config
-// but does not automatically call the LLM. Use OnChat to implement
-// your own LLM calls. Automatic LLM integration coming in v0.2.0.
+// WithLLM configures an LLM provider for classification. In v0.1.0, this
+// stores the config. Use WithClassifier to provide an LLM-backed classifier.
 func (s *Server) WithLLM(provider, model, apiKeyEnv string) *Server {
 	s.llmConfig = &LLMConfig{Provider: provider, Model: model, APIKeyEnv: apiKeyEnv}
 	return s
@@ -96,11 +213,14 @@ func (s *Server) PublicKey() string {
 	return noise.KeyToHex(s.key.Public)
 }
 
-// GetTRUGContext returns a text summary of the loaded TRUG data, suitable
-// for including in LLM prompts or chat handler context. Returns "" if no
-// TRUG is loaded.
+// GetTRUGContext returns a text summary of the loaded TRUG data.
 func (s *Server) GetTRUGContext() string {
 	return s.buildTRUGContext()
+}
+
+// GetResponses returns the loaded response nodes.
+func (s *Server) GetResponses() []ResponseNode {
+	return s.responses
 }
 
 func (s *Server) buildTRUGContext() string {
@@ -128,6 +248,53 @@ func (s *Server) buildTRUGContext() string {
 	return ctx.String()
 }
 
+// ── Default Classifier ───────────────────────────────────────────────────
+
+// defaultClassifier does case-insensitive keyword matching.
+// Replace with WithClassifier for LLM-powered classification.
+func defaultClassifier(userText string, nodes []ResponseNode) []string {
+	lower := strings.ToLower(userText)
+
+	type scored struct {
+		id    string
+		score int
+	}
+	var matches []scored
+
+	for _, node := range nodes {
+		score := 0
+		for _, kw := range node.Keywords {
+			if strings.Contains(lower, strings.ToLower(kw)) {
+				score++
+			}
+		}
+		if score > 0 {
+			matches = append(matches, scored{id: node.ID, score: score})
+		}
+	}
+
+	if len(matches) == 0 {
+		return nil
+	}
+
+	// Sort by score descending, return all matching IDs
+	for i := 0; i < len(matches); i++ {
+		for j := i + 1; j < len(matches); j++ {
+			if matches[j].score > matches[i].score {
+				matches[i], matches[j] = matches[j], matches[i]
+			}
+		}
+	}
+
+	ids := make([]string, len(matches))
+	for i, m := range matches {
+		ids[i] = m.id
+	}
+	return ids
+}
+
+// ── Server Lifecycle ─────────────────────────────────────────────────────
+
 // ListenAndServe starts the server and blocks until SIGINT/SIGTERM.
 func (s *Server) ListenAndServe() error {
 	listener, err := noise.Listen(s.addr, s.key)
@@ -138,6 +305,9 @@ func (s *Server) ListenAndServe() error {
 
 	log.Printf("Noise Chatbot listening on %s", s.addr)
 	log.Printf("Public key: %s", s.PublicKey())
+	if len(s.responses) > 0 {
+		log.Printf("Template mode: %d response nodes loaded (LLM classifies, never composes)", len(s.responses))
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -165,8 +335,6 @@ func (s *Server) ListenAndServe() error {
 }
 
 // ServeListener serves on an existing Noise listener with the given context.
-// Returns nil when the context is cancelled. This is useful for tests that
-// need to control the listener address and lifecycle.
 func (s *Server) ServeListener(ctx context.Context, listener *noise.Listener) error {
 	go func() {
 		<-ctx.Done()
@@ -212,14 +380,51 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 		return s.msgHandler(msg)
 	}
 
-	// Simple chat handler
-	if msg.Type == "CHAT" && s.chatHandler != nil {
+	if msg.Type == "CHAT" {
 		var req struct {
 			Text string `json:"text"`
 		}
 		json.Unmarshal(msg.Payload, &req)
 
-		responseText := s.chatHandler(req.Text)
+		var responseText string
+
+		// Template mode: LLM classifies, response comes from TRUG nodes VERBATIM.
+		// The LLM picks node IDs. It never generates response text.
+		if len(s.responses) > 0 {
+			classify := s.classifier
+			if classify == nil {
+				classify = defaultClassifier
+			}
+			nodeIDs := classify(req.Text, s.responses)
+
+			if len(nodeIDs) == 0 {
+				responseText = s.noMatchText
+			} else {
+				// Build response by concatenating matched nodes' text VERBATIM
+				responseIndex := make(map[string]string)
+				for _, node := range s.responses {
+					responseIndex[node.ID] = node.Response
+				}
+				var parts []string
+				for _, id := range nodeIDs {
+					if text, ok := responseIndex[id]; ok {
+						parts = append(parts, text)
+					}
+				}
+				if len(parts) == 0 {
+					responseText = s.noMatchText
+				} else {
+					responseText = strings.Join(parts, "\n\n")
+				}
+			}
+		} else if s.chatHandler != nil {
+			// Legacy mode: handler returns arbitrary text (deprecated)
+			responseText = s.chatHandler(req.Text)
+		} else {
+			// No handler, no responses: echo
+			responseText = req.Text
+		}
+
 		payload, _ := json.Marshal(map[string]string{"text": responseText})
 		return protocol.Message{
 			Type:    "CHAT",
@@ -229,7 +434,7 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 		}
 	}
 
-	// Default echo
+	// Default echo for non-CHAT messages
 	return protocol.Message{
 		Type:    msg.Type,
 		Payload: msg.Payload,

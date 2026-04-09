@@ -190,6 +190,143 @@ func TestGetTRUGContext(t *testing.T) {
 	}
 }
 
+func TestTemplateModeSingleMatch(t *testing.T) {
+	s, addr, cancel := startTestServer(t)
+	defer cancel()
+
+	s.WithResponses([]ResponseNode{
+		{ID: "hours", Keywords: []string{"hours", "open", "time"}, Response: "We are open Monday through Friday, 9am to 5pm."},
+		{ID: "pricing", Keywords: []string{"price", "cost", "pricing"}, Response: "Plans start at $29/month."},
+		{ID: "contact", Keywords: []string{"contact", "email", "phone"}, Response: "Email us at hello@example.com."},
+	})
+
+	conn := connectClient(t, addr, s.Key().Public)
+	defer conn.Close()
+
+	got := sendChat(t, conn, "What are your hours?")
+	if got != "We are open Monday through Friday, 9am to 5pm." {
+		t.Fatalf("got %q, want exact hours response", got)
+	}
+}
+
+func TestTemplateModeMultipleMatch(t *testing.T) {
+	s, addr, cancel := startTestServer(t)
+	defer cancel()
+
+	s.WithResponses([]ResponseNode{
+		{ID: "hours", Keywords: []string{"hours", "open"}, Response: "We are open 9-5."},
+		{ID: "pricing", Keywords: []string{"pricing", "cost"}, Response: "Plans start at $29."},
+	})
+
+	conn := connectClient(t, addr, s.Key().Public)
+	defer conn.Close()
+
+	// Query matches both keywords
+	got := sendChat(t, conn, "What are your hours and pricing cost?")
+	if !contains(got, "We are open 9-5.") {
+		t.Fatalf("response missing hours: %q", got)
+	}
+	if !contains(got, "Plans start at $29.") {
+		t.Fatalf("response missing pricing: %q", got)
+	}
+}
+
+func TestTemplateModeNoMatch(t *testing.T) {
+	s, addr, cancel := startTestServer(t)
+	defer cancel()
+
+	s.WithResponses([]ResponseNode{
+		{ID: "hours", Keywords: []string{"hours"}, Response: "We are open 9-5."},
+	})
+	s.WithNoMatch("Sorry, I can't help with that.")
+
+	conn := connectClient(t, addr, s.Key().Public)
+	defer conn.Close()
+
+	got := sendChat(t, conn, "What is the meaning of life?")
+	if got != "Sorry, I can't help with that." {
+		t.Fatalf("got %q, want no-match response", got)
+	}
+}
+
+func TestTemplateModeOverridesOnChat(t *testing.T) {
+	s, addr, cancel := startTestServer(t)
+	defer cancel()
+
+	// Set both — template mode should take priority
+	s.OnChat(func(text string) string {
+		return "THIS SHOULD NOT APPEAR"
+	})
+	s.WithResponses([]ResponseNode{
+		{ID: "hours", Keywords: []string{"hours"}, Response: "We are open 9-5."},
+	})
+
+	conn := connectClient(t, addr, s.Key().Public)
+	defer conn.Close()
+
+	got := sendChat(t, conn, "hours")
+	if got == "THIS SHOULD NOT APPEAR" {
+		t.Fatal("template mode should override OnChat")
+	}
+	if got != "We are open 9-5." {
+		t.Fatalf("got %q, want template response", got)
+	}
+}
+
+func TestTemplateModeCustomClassifier(t *testing.T) {
+	s, addr, cancel := startTestServer(t)
+	defer cancel()
+
+	s.WithResponses([]ResponseNode{
+		{ID: "a", Keywords: nil, Response: "Answer A"},
+		{ID: "b", Keywords: nil, Response: "Answer B"},
+	})
+	// Custom classifier always picks both
+	s.WithClassifier(func(userText string, nodes []ResponseNode) []string {
+		return []string{"b", "a"}
+	})
+
+	conn := connectClient(t, addr, s.Key().Public)
+	defer conn.Close()
+
+	got := sendChat(t, conn, "anything")
+	if got != "Answer B\n\nAnswer A" {
+		t.Fatalf("got %q, want both answers in order", got)
+	}
+}
+
+func TestLLMNeverGeneratesText(t *testing.T) {
+	// This test verifies the structural guarantee: in template mode,
+	// the response text can ONLY come from ResponseNode.Response fields.
+	// There is no code path where the LLM can inject generated text.
+
+	s := New("127.0.0.1:0")
+	s.WithResponses([]ResponseNode{
+		{ID: "only", Keywords: []string{"test"}, Response: "This is the only possible response."},
+	})
+
+	// Simulate handleMessage directly
+	msg := protocol.Message{
+		Type:    "CHAT",
+		Payload: json.RawMessage(`{"text":"test"}`),
+		ID:      "verify-1",
+	}
+	resp := s.handleMessage(msg)
+
+	var payload struct{ Text string `json:"text"` }
+	json.Unmarshal(resp.Payload, &payload)
+
+	// The response MUST be either the node response or the noMatchText
+	// It cannot be anything else — there is no generation path
+	allowed := map[string]bool{
+		"This is the only possible response.": true,
+		s.noMatchText:                         true,
+	}
+	if !allowed[payload.Text] {
+		t.Fatalf("response %q is not from any ResponseNode — LLM may have generated text", payload.Text)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && searchString(s, sub)
 }
