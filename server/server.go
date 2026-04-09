@@ -861,14 +861,16 @@ func (s *Server) handleMessageFull(msg protocol.Message, questionCount int) (pro
 			responseText = req.Text
 		}
 
-		// Format response: [count] echo question + answer + contact footer
+		// Format response: echo question + answer + contact footer + count
 		formattedResponse := responseText
 		if questionCount > 0 {
-			// Repeat the question so it reads like a FAQ
-			formattedResponse = fmt.Sprintf("[%d] You asked about: %s\n\n%s", questionCount, req.Text, responseText)
+			formattedResponse = fmt.Sprintf("You asked about: %s\n\n%s", req.Text, responseText)
 		}
 		if s.contactFooter != "" {
 			formattedResponse += "\n\n" + s.contactFooter
+		}
+		if questionCount > 0 {
+			formattedResponse += fmt.Sprintf("\n\n(%d)", questionCount)
 		}
 
 		payload, _ := json.Marshal(map[string]string{"text": formattedResponse})
