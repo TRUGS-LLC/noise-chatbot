@@ -1,0 +1,10 @@
+{
+    "name": "Example Knowledge Base",
+    "nodes": [
+        {"id": "product", "type": "TOPIC", "properties": {"name": "Our Product", "description": "An encrypted chatbot framework built on the Noise Protocol"}},
+        {"id": "pricing", "type": "TOPIC", "properties": {"name": "Pricing", "description": "Free for basic use. Premium features start at $29."}}
+    ],
+    "edges": [
+        {"from_id": "product", "to_id": "pricing", "relation": "REFERENCES"}
+    ]
+}
