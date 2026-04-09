@@ -194,6 +194,7 @@ func TestTemplateModeSingleMatch(t *testing.T) {
 	s, addr, cancel := startTestServer(t)
 	defer cancel()
 
+	s.guardrails = nil
 	s.WithResponses([]ResponseNode{
 		{ID: "hours", Keywords: []string{"hours", "open", "time"}, Response: "We are open Monday through Friday, 9am to 5pm."},
 		{ID: "pricing", Keywords: []string{"price", "cost", "pricing"}, Response: "Plans start at $29/month."},
@@ -213,6 +214,7 @@ func TestTemplateModeMultipleMatch(t *testing.T) {
 	s, addr, cancel := startTestServer(t)
 	defer cancel()
 
+	s.guardrails = nil
 	s.WithResponses([]ResponseNode{
 		{ID: "hours", Keywords: []string{"hours", "open"}, Response: "We are open 9-5."},
 		{ID: "pricing", Keywords: []string{"pricing", "cost"}, Response: "Plans start at $29."},
@@ -235,6 +237,7 @@ func TestTemplateModeNoMatch(t *testing.T) {
 	s, addr, cancel := startTestServer(t)
 	defer cancel()
 
+	s.guardrails = nil
 	s.WithResponses([]ResponseNode{
 		{ID: "hours", Keywords: []string{"hours"}, Response: "We are open 9-5."},
 	})
@@ -254,6 +257,7 @@ func TestTemplateModeOverridesOnChat(t *testing.T) {
 	defer cancel()
 
 	// Set both — template mode should take priority
+	s.guardrails = nil
 	s.OnChat(func(text string) string {
 		return "THIS SHOULD NOT APPEAR"
 	})
@@ -277,6 +281,7 @@ func TestTemplateModeCustomClassifier(t *testing.T) {
 	s, addr, cancel := startTestServer(t)
 	defer cancel()
 
+	s.guardrails = nil
 	s.WithResponses([]ResponseNode{
 		{ID: "a", Keywords: nil, Response: "Answer A"},
 		{ID: "b", Keywords: nil, Response: "Answer B"},
@@ -486,6 +491,7 @@ func TestWindDown20Summary(t *testing.T) {
 	s, addr, cancel := startTestServer(t)
 	defer cancel()
 
+	s.guardrails = nil
 	s.WithResponses([]ResponseNode{
 		{ID: "hours", Keywords: []string{"hours"}, Response: "We are open 9-5."},
 	})

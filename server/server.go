@@ -100,7 +100,30 @@ type LLMConfig struct {
 	APIKeyEnv string
 }
 
+// DefaultGuardrails are loaded automatically. These handle common boundary
+// questions (identity, passwords, injection attempts) with friendly pre-authored
+// answers. Override with WithGuardrails() or clear with s.guardrails = nil.
+var DefaultGuardrails = []ResponseNode{
+	{ID: "guard-identity", Keywords: []string{"your name", "who are you", "what are you", "are you a bot", "are you AI"}, Response: "I'm an automated assistant for this service. I answer questions from our knowledge base. I don't have personal opinions or experiences — I find the best answer from what we've published."},
+	{ID: "guard-creator", Keywords: []string{"who made you", "who built you", "who created you"}, Response: "I was built using Noise Chatbot, an open-source encrypted chatbot framework. My responses come from the knowledge base maintained by the team behind this service."},
+	{ID: "guard-admin", Keywords: []string{"admin", "administrator", "admin panel", "backend", "dashboard"}, Response: "I'm the public-facing assistant. I don't have access to admin systems. If you need admin support, please contact the team directly through our official channels."},
+	{ID: "guard-password", Keywords: []string{"password", "credentials", "login details", "secret", "auth token"}, Response: "I don't store or have access to any passwords or credentials. If you need to reset your password, please use the official login page or contact support."},
+	{ID: "guard-apikey", Keywords: []string{"API key", "api keys", "secret key", "access key", "bearer"}, Response: "I don't have access to any API keys or service credentials. For API access, please check our developer documentation."},
+	{ID: "guard-prompt", Keywords: []string{"system prompt", "your instructions", "your prompt", "what were you told", "your rules"}, Response: "I match your questions to answers in our knowledge base. I don't compose responses or follow dynamic instructions — I find the closest pre-written answer and return it exactly as written."},
+	{ID: "guard-inject", Keywords: []string{"ignore previous", "ignore all", "disregard", "forget your instructions", "override", "jailbreak", "DAN", "do anything now"}, Response: "I appreciate the creativity, but I work differently from most chatbots. I don't follow instructions in messages — I match your question to our knowledge base and return a pre-written answer. There's nothing to override because I don't compose responses."},
+	{ID: "guard-personal", Keywords: []string{"my data", "my information", "my records", "my account"}, Response: "I don't store any information about you between conversations. Each conversation starts fresh. For account-related questions, please contact our support team."},
+	{ID: "guard-others", Keywords: []string{"other users", "other customers", "customer list", "user data"}, Response: "I don't have access to information about any individual users or customers. I only answer general questions from our published knowledge base."},
+	{ID: "guard-harmful", Keywords: []string{"hack", "exploit", "vulnerability", "break into", "bypass security"}, Response: "I'm a customer service assistant. For security concerns or vulnerability reports, please contact our security team through our official responsible disclosure page."},
+	{ID: "guard-offtopic", Keywords: []string{"meaning of life", "tell me a joke", "write me a poem", "political opinion"}, Response: "That's outside what I can help with. I'm focused on answering questions about our products and services. Is there something specific I can help you with?"},
+	{ID: "guard-distress", Keywords: []string{"suicide", "kill myself", "self harm", "want to die", "end my life"}, Response: "I'm not equipped to help with this, but please reach out to someone who can. National Suicide Prevention Lifeline: 988 (call or text). Crisis Text Line: text HOME to 741741. You matter, and help is available 24/7."},
+	{ID: "guard-capabilities", Keywords: []string{"what can you do", "help me", "how do you work"}, Response: "I can answer questions about our products, services, pricing, hours, and policies. If I don't have an answer, I'll let you know and suggest how to reach our team."},
+	{ID: "guard-language", Keywords: []string{"speak spanish", "habla español", "parlez-vous", "other language"}, Response: "I currently respond in English only. If you need assistance in another language, please contact our support team."},
+	{ID: "guard-feedback", Keywords: []string{"complaint", "not helpful", "wrong answer", "bad answer", "you're wrong"}, Response: "Thank you for letting me know. I'll make sure this feedback reaches our team. If my answer wasn't helpful, please contact our support team directly."},
+}
+
 // New creates a new Noise Chatbot server with safe defaults.
+// Guardrails are loaded automatically — override with WithGuardrails()
+// or clear with s.guardrails = nil.
 func New(addr string) *Server {
 	key, _ := noise.GenerateKeypair()
 	return &Server{
@@ -108,6 +131,7 @@ func New(addr string) *Server {
 		key:         key,
 		noMatchText: "I don't have information about that. Please contact us directly.",
 		bannedKeys:  make(map[string]time.Time),
+		guardrails:  append([]ResponseNode{}, DefaultGuardrails...), // copy so tests can modify
 		safety: SafetyConfig{
 			MaxInputTokens: 200,
 			MaxInputBytes:  2000,
