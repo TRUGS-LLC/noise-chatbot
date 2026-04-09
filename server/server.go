@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/TRUGS-LLC/noise-chatbot/noise"
@@ -70,7 +71,9 @@ func (s *Server) WithTRUG(path string) *Server {
 	return s
 }
 
-// WithLLM configures an LLM provider for chat responses.
+// WithLLM configures an LLM provider. In v0.1.0, this stores the config
+// but does not automatically call the LLM. Use OnChat to implement
+// your own LLM calls. Automatic LLM integration coming in v0.2.0.
 func (s *Server) WithLLM(provider, model, apiKeyEnv string) *Server {
 	s.llmConfig = &LLMConfig{Provider: provider, Model: model, APIKeyEnv: apiKeyEnv}
 	return s
@@ -83,9 +86,46 @@ func (s *Server) WithUpstream(addr, key string) *Server {
 	return s
 }
 
+// Key returns the server's Noise keypair (useful for tests).
+func (s *Server) Key() noise.DHKey {
+	return s.key
+}
+
 // PublicKey returns the server's Noise public key as hex.
 func (s *Server) PublicKey() string {
 	return noise.KeyToHex(s.key.Public)
+}
+
+// GetTRUGContext returns a text summary of the loaded TRUG data, suitable
+// for including in LLM prompts or chat handler context. Returns "" if no
+// TRUG is loaded.
+func (s *Server) GetTRUGContext() string {
+	return s.buildTRUGContext()
+}
+
+func (s *Server) buildTRUGContext() string {
+	if s.trugData == nil {
+		return ""
+	}
+	nodes, ok := s.trugData["nodes"].([]any)
+	if !ok {
+		return ""
+	}
+	var ctx strings.Builder
+	ctx.WriteString("Knowledge base:\n")
+	for _, n := range nodes {
+		node, ok := n.(map[string]any)
+		if !ok {
+			continue
+		}
+		props, _ := node["properties"].(map[string]any)
+		name, _ := props["name"].(string)
+		desc, _ := props["description"].(string)
+		if name != "" {
+			ctx.WriteString(fmt.Sprintf("- %s: %s\n", name, desc))
+		}
+	}
+	return ctx.String()
 }
 
 // ListenAndServe starts the server and blocks until SIGINT/SIGTERM.
@@ -118,6 +158,26 @@ func (s *Server) ListenAndServe() error {
 				return nil
 			}
 			log.Printf("accept error: %v", err)
+			continue
+		}
+		go s.serveConn(ctx, conn)
+	}
+}
+
+// ServeListener serves on an existing Noise listener with the given context.
+// Returns nil when the context is cancelled. This is useful for tests that
+// need to control the listener address and lifecycle.
+func (s *Server) ServeListener(ctx context.Context, listener *noise.Listener) error {
+	go func() {
+		<-ctx.Done()
+		listener.Close()
+	}()
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
 			continue
 		}
 		go s.serveConn(ctx, conn)
