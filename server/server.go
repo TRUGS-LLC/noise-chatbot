@@ -75,10 +75,11 @@ type Server struct {
 	upstreamKey  string
 
 	// Template-only mode — LLM classifies, never composes
-	responses    []ResponseNode
-	guardrails   []ResponseNode // built-in guardrails (always checked first)
-	classifier   Classifier
-	noMatchText  string // returned when classifier finds no match
+	responses          []ResponseNode
+	guardrails         []ResponseNode // built-in guardrails (always checked first)
+	classifier         Classifier
+	fallbackClassifier Classifier // LLM-based, called when keywords don't match (disabled after 20 Q)
+	noMatchText        string     // returned when classifier finds no match
 
 	// Safety
 	safety       SafetyConfig
@@ -242,14 +243,22 @@ func (s *Server) WithResponsesFromTRUG(path string) *Server {
 }
 
 // WithClassifier sets a custom classifier function. The classifier receives
-// the user's text and the available response nodes. It returns the ID of the
-// best matching node, or "" if no match.
+// the user's text and the available response nodes. It returns the IDs of the
+// best matching nodes, or nil if no match.
 //
-// The classifier ONLY picks a node ID. It never generates response text.
+// The classifier ONLY picks node IDs. It never generates response text.
 // The default classifier does keyword matching. Replace with an LLM classifier
 // for intelligent matching.
 func (s *Server) WithClassifier(classifier Classifier) *Server {
 	s.classifier = classifier
+	return s
+}
+
+// WithFallbackClassifier sets an LLM-backed classifier called when the primary
+// keyword classifier finds no match. Only used for the first 20 questions per
+// session — after that, keyword matching only (zero API cost for abusive sessions).
+func (s *Server) WithFallbackClassifier(classifier Classifier) *Server {
+	s.fallbackClassifier = classifier
 	return s
 }
 
@@ -573,7 +582,7 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 			}
 		}
 
-		resp, matchedNodes, hitGuardrail := s.handleMessageWithStats(msg)
+		resp, matchedNodes, hitGuardrail := s.handleMessageFull(msg, questionCount)
 
 		// Track analytics
 		for _, id := range matchedNodes {
@@ -754,12 +763,18 @@ func mustMarshalJSON(v any) json.RawMessage {
 
 // handleMessage is the legacy entry point (no stats). Used by tests.
 func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
-	resp, _, _ := s.handleMessageWithStats(msg)
+	resp, _, _ := s.handleMessageFull(msg, 0)
 	return resp
 }
 
-// handleMessageWithStats returns the response, matched node IDs, and whether a guardrail was hit.
+// handleMessageWithStats is called from serveConn with question count.
 func (s *Server) handleMessageWithStats(msg protocol.Message) (protocol.Message, []string, bool) {
+	return s.handleMessageFull(msg, 0)
+}
+
+// handleMessageFull returns the response, matched node IDs, and whether a guardrail was hit.
+// questionCount controls whether the LLM fallback classifier is used (disabled after 20).
+func (s *Server) handleMessageFull(msg protocol.Message, questionCount int) (protocol.Message, []string, bool) {
 	// Full message handler takes priority
 	if s.msgHandler != nil {
 		return s.msgHandler(msg), nil, false
@@ -799,6 +814,13 @@ func (s *Server) handleMessageWithStats(msg protocol.Message) (protocol.Message,
 		// If no guardrail matched, check business responses
 		if responseText == "" && len(s.responses) > 0 {
 			nodeIDs := classify(req.Text, s.responses)
+
+			// If keywords didn't match and we have a fallback LLM classifier,
+			// use it — but only for the first 20 questions (zero API cost after)
+			if len(nodeIDs) == 0 && s.fallbackClassifier != nil && questionCount <= 20 {
+				nodeIDs = s.fallbackClassifier(req.Text, s.responses)
+			}
+
 			matchedNodes = nodeIDs
 
 			if len(nodeIDs) == 0 {
@@ -829,7 +851,13 @@ func (s *Server) handleMessageWithStats(msg protocol.Message) (protocol.Message,
 			responseText = req.Text
 		}
 
-		payload, _ := json.Marshal(map[string]string{"text": responseText})
+		// Add visible answer count to every response (only in live sessions)
+		numberedResponse := responseText
+		if questionCount > 0 {
+			numberedResponse = fmt.Sprintf("[%d] %s", questionCount, responseText)
+		}
+
+		payload, _ := json.Marshal(map[string]string{"text": numberedResponse})
 		return protocol.Message{
 			Type:    "CHAT",
 			Payload: payload,
