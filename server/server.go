@@ -82,6 +82,8 @@ type Server struct {
 
 	// Safety
 	safety       SafetyConfig
+	bannedKeys   map[string]time.Time // Noise public key → ban time
+	bannedMu     sync.RWMutex
 
 	// Analytics callback — called for every message
 	onAnalytics  func(stats ConnectionStats, question string, matchedNodes []string)
@@ -101,6 +103,7 @@ func New(addr string) *Server {
 		addr:        addr,
 		key:         key,
 		noMatchText: "I don't have information about that. Please contact us directly.",
+		bannedKeys:  make(map[string]time.Time),
 		safety: SafetyConfig{
 			MaxInputTokens: 200,
 			MaxInputBytes:  2000,
@@ -451,6 +454,16 @@ func (s *Server) ServeListener(ctx context.Context, listener *noise.Listener) er
 func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 	defer conn.Close()
 
+	// Check if this Noise key is banned
+	keyHex := noise.KeyToHex(conn.RemoteIdentity())
+	s.bannedMu.RLock()
+	_, banned := s.bannedKeys[keyHex]
+	s.bannedMu.RUnlock()
+	if banned {
+		// Silently close — no response, no acknowledgment
+		return
+	}
+
 	stats := ConnectionStats{
 		NodeHits:    make(map[string]int),
 		ConnectedAt: time.Now(),
@@ -586,7 +599,26 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 			}
 			time.Sleep(delay)
 		}
-		if guardrailHits >= 8 {
+		if guardrailHits >= 12 {
+			// Tier 5: goodbye. Ban the Noise key. Connection closed.
+			farewell := protocol.Message{
+				Type:    "CHAT",
+				Payload: mustMarshalJSON(map[string]string{"text": "Thank you for chatting with us today! It looks like I've answered everything I can. Have a great day!"}),
+				ID:      uuid.New().String(),
+				ReplyTo: msg.ID,
+			}
+			farewellData, _ := json.Marshal(farewell)
+			conn.Send(farewellData)
+
+			// Ban this Noise public key — no future connections accepted
+			keyHex := noise.KeyToHex(conn.RemoteIdentity())
+			s.bannedMu.Lock()
+			s.bannedKeys[keyHex] = time.Now()
+			s.bannedMu.Unlock()
+			log.Printf("Banned key %s (honeypot tier 5 — repeated probing)", keyHex[:16])
+
+			return // close connection
+		} else if guardrailHits >= 8 {
 			// Tier 4: loops back to seeming helpful — endless cycle
 			honeypot := []string{
 				"Actually, let me check on that for you... I think there might be something in our system. Can you be more specific about what you need?",
