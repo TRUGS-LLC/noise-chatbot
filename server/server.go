@@ -831,6 +831,11 @@ func (s *Server) handleMessageFull(msg protocol.Message, questionCount int) (pro
 				nodeIDs = s.fallbackClassifier(req.Text, s.responses)
 			}
 
+			// Cap at 3 matches — prevents dumping the entire TRUG in one query
+			if len(nodeIDs) > 3 {
+				nodeIDs = nodeIDs[:3]
+			}
+
 			matchedNodes = nodeIDs
 
 			if len(nodeIDs) == 0 {
