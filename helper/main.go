@@ -10,6 +10,13 @@
 //   - Prints "ERROR: ..." to stderr on failure
 package main
 
+// <trl>
+// DEFINE "helper" AS PROCESS.
+// PROCESS helper READS RECORD message FROM ENTRY stdin THEN SEND TO ENDPOINT server.
+// PROCESS helper READS RECORD message FROM ENDPOINT server THEN WRITE TO EXIT stdout.
+// EACH RECORD message SHALL ENCRYPT 'with RECORD noise_ik.
+// </trl>
+
 import (
 	"bufio"
 	"encoding/json"

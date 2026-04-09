@@ -1,0 +1,126 @@
+{
+  "name": "Noise Chatbot",
+  "version": "0.4.0",
+  "type": "LIBRARY",
+  "description": "Encrypted chatbot framework — Noise_IK by default. LLM classifies, never composes. Apache 2.0.",
+  "dimensions": {
+    "code_structure": {
+      "description": "Go packages and their relationships",
+      "base_level": "BASE"
+    }
+  },
+  "nodes": [
+    {
+      "id": "root",
+      "type": "MODULE",
+      "parent_id": null,
+      "contains": ["pkg_server", "pkg_client", "pkg_noise", "pkg_protocol", "pkg_helper", "pkg_examples", "file_guardrails"],
+      "properties": {"name": "noise-chatbot", "language": "go", "license": "Apache-2.0", "owner": "TRUGS-LLC"},
+      "metric_level": "KILO_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_server",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "server",
+        "path": "server/",
+        "description": "Encrypted chatbot server — New(), OnChat(), WithResponses(), WithGuardrails(), ListenAndServe(). Template-only mode: LLM classifies, never composes.",
+        "key_types": ["Server", "ResponseNode", "Classifier", "SafetyConfig", "ConnectionStats"]
+      },
+      "metric_level": "HECTO_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_client",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "client",
+        "path": "client/",
+        "description": "Encrypted chatbot client — Connect(), Chat(), Send(), Close()",
+        "key_types": ["Client"]
+      },
+      "metric_level": "HECTO_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_noise",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "noise",
+        "path": "noise/",
+        "description": "Noise_IK transport — Curve25519 + ChaCha20-Poly1305 + BLAKE2b. Handshake, encrypted send/receive, key management.",
+        "key_types": ["NoiseConn", "Listener", "DHKey"]
+      },
+      "metric_level": "HECTO_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_protocol",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "protocol",
+        "path": "protocol/",
+        "description": "Wire format — Message type with type/payload/id/reply_to"
+      },
+      "metric_level": "BASE_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_helper",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "helper",
+        "path": "helper/",
+        "description": "noise-helper binary — stdin/stdout JSON bridge for non-Go clients (VS Code, mobile, web)"
+      },
+      "metric_level": "BASE_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "pkg_examples",
+      "type": "MODULE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "examples",
+        "path": "examples/",
+        "description": "Four examples: echo (10 lines), faq (keyword matching), llm (API-backed), graph (TRUG-backed)"
+      },
+      "metric_level": "BASE_MODULE",
+      "dimension": "code_structure"
+    },
+    {
+      "id": "file_guardrails",
+      "type": "FILE",
+      "parent_id": "root",
+      "contains": [],
+      "properties": {
+        "name": "guardrails.trug.json",
+        "path": "guardrails.trug.json",
+        "description": "15 pre-authored responses for boundary questions (identity, passwords, injection, distress). Loaded by default."
+      },
+      "metric_level": "BASE_FILE",
+      "dimension": "code_structure"
+    }
+  ],
+  "edges": [
+    {"from_id": "pkg_server", "to_id": "pkg_noise", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_server", "to_id": "pkg_protocol", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_client", "to_id": "pkg_noise", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_client", "to_id": "pkg_protocol", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_helper", "to_id": "pkg_noise", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_examples", "to_id": "pkg_server", "relation": "DEPENDS_ON"},
+    {"from_id": "pkg_server", "to_id": "file_guardrails", "relation": "REFERENCES"}
+  ]
+}

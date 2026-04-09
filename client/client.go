@@ -1,5 +1,13 @@
 package client
 
+// <trl>
+// DEFINE "client" AS MODULE.
+// MODULE client CONTAINS FUNCTION Connect AND FUNCTION Chat AND FUNCTION Send AND FUNCTION Close.
+// MODULE client DEPENDS_ON MODULE noise AND MODULE protocol.
+// FUNCTION Connect SHALL AUTHENTICATE SUBJECT_TO RECORD server_public_key.
+// EACH RECORD message SHALL ENCRYPT 'with RECORD noise_ik THEN SEND TO ENDPOINT server.
+// </trl>
+
 import (
 	"encoding/json"
 	"fmt"

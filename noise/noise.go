@@ -1,5 +1,13 @@
 package noise
 
+// <trl>
+// DEFINE "noise" AS MODULE.
+// MODULE noise IMPLEMENTS INTERFACE encrypted_transport.
+// MODULE noise CONTAINS FUNCTION GenerateKeypair AND FUNCTION Dial AND FUNCTION Listen.
+// EACH RECORD message SHALL ENCRYPT 'with RECORD chacha20_poly1305.
+// EACH RECORD handshake SHALL AUTHENTICATE 'with RECORD curve25519.
+// </trl>
+
 import (
 	"crypto/rand"
 	"encoding/hex"
