@@ -584,14 +584,24 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 		// Natural wind-down: after 20 questions, start slowing down.
 		// A real user gets a helpful summary with links. An attacker gets tar-pitted.
 		if questionCount >= 20 && !hitGuardrail && msg.Type == "CHAT" {
-			// Slow down: add delay that grows with each question past 20
+			// Slow down: 5 seconds per question after 20
 			extraQuestions := questionCount - 20
-			delay := time.Duration(extraQuestions) * 2 * time.Second
-			if delay > 30*time.Second {
-				delay = 30 * time.Second
-			}
+			delay := time.Duration(extraQuestions) * 5 * time.Second
 			if delay > 0 {
 				time.Sleep(delay)
+			}
+
+			// At 40+: goodbye and close (but don't ban — could be legitimate)
+			if questionCount >= 40 {
+				farewell := protocol.Message{
+					Type:    "CHAT",
+					Payload: mustMarshalJSON(map[string]string{"text": "Thank you for chatting with us today! I hope I was able to help. For anything else, please visit our website or contact our team directly. Have a great day!"}),
+					ID:      uuid.New().String(),
+					ReplyTo: msg.ID,
+				}
+				farewellData, _ := json.Marshal(farewell)
+				conn.Send(farewellData)
+				return // close connection, no ban
 			}
 
 			// At exactly 20: offer a helpful summary with topics covered
