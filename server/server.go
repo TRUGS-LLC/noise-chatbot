@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/TRUGS-LLC/noise-chatbot/noise"
 	"github.com/TRUGS-LLC/noise-chatbot/protocol"
@@ -43,6 +45,25 @@ type MessageHandler func(msg protocol.Message) protocol.Message
 //   - Handler mode (legacy): OnChat callback returns arbitrary text — LLM can compose (unsafe)
 //
 // Template mode is the default when WithResponses is used. The LLM never touches the output.
+// SafetyConfig configures defensive options for the chatbot.
+type SafetyConfig struct {
+	MaxInputTokens   int           // max tokens per message (0 = unlimited, default 200)
+	MaxInputBytes    int           // max bytes per message (0 = unlimited, default 2000)
+	RateLimit        int           // max messages per minute per connection (0 = unlimited, default 30)
+	SessionTimeout   time.Duration // disconnect after idle time (0 = no timeout, default 30m)
+	Greeting         string        // first message sent on connect (empty = no greeting)
+	ConfidenceMin    int           // minimum keyword matches to respond (0 = any match, default 1)
+}
+
+// ConnectionStats tracks per-connection analytics.
+type ConnectionStats struct {
+	MessagesReceived int
+	NodeHits         map[string]int // node ID → hit count
+	NoMatchCount     int
+	ConnectedAt      time.Time
+	LastMessageAt    time.Time
+}
+
 type Server struct {
 	addr         string
 	key          noise.DHKey
@@ -55,8 +76,15 @@ type Server struct {
 
 	// Template-only mode — LLM classifies, never composes
 	responses    []ResponseNode
+	guardrails   []ResponseNode // built-in guardrails (always checked first)
 	classifier   Classifier
 	noMatchText  string // returned when classifier finds no match
+
+	// Safety
+	safety       SafetyConfig
+
+	// Analytics callback — called for every message
+	onAnalytics  func(stats ConnectionStats, question string, matchedNodes []string)
 }
 
 // LLMConfig configures an LLM provider for classification.
@@ -66,14 +94,82 @@ type LLMConfig struct {
 	APIKeyEnv string
 }
 
-// New creates a new Noise Chatbot server.
+// New creates a new Noise Chatbot server with safe defaults.
 func New(addr string) *Server {
 	key, _ := noise.GenerateKeypair()
 	return &Server{
 		addr:        addr,
 		key:         key,
 		noMatchText: "I don't have information about that. Please contact us directly.",
+		safety: SafetyConfig{
+			MaxInputTokens: 200,
+			MaxInputBytes:  2000,
+			RateLimit:      30,
+			SessionTimeout: 30 * time.Minute,
+			ConfidenceMin:  1,
+		},
 	}
+}
+
+// WithSafety configures safety options (input limits, rate limiting, timeouts).
+func (s *Server) WithSafety(cfg SafetyConfig) *Server {
+	s.safety = cfg
+	return s
+}
+
+// WithGreeting sets the first message sent when a user connects.
+func (s *Server) WithGreeting(text string) *Server {
+	s.safety.Greeting = text
+	return s
+}
+
+// WithGuardrails loads the built-in guardrails TRUG. These response nodes
+// are checked BEFORE the business responses, handling common boundary
+// questions (identity, passwords, prompt injection, etc.) with pre-authored
+// friendly answers.
+func (s *Server) WithGuardrails(path string) *Server {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("warning: could not load guardrails %s: %v", path, err)
+		return s
+	}
+	var trug struct {
+		Nodes []struct {
+			ID         string         `json:"id"`
+			Properties map[string]any `json:"properties"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal(data, &trug); err != nil {
+		return s
+	}
+	for _, n := range trug.Nodes {
+		response, _ := n.Properties["response"].(string)
+		if response == "" {
+			continue
+		}
+		var keywords []string
+		if kw, ok := n.Properties["keywords"].([]any); ok {
+			for _, k := range kw {
+				if str, ok := k.(string); ok {
+					keywords = append(keywords, str)
+				}
+			}
+		}
+		s.guardrails = append(s.guardrails, ResponseNode{
+			ID:       n.ID,
+			Keywords: keywords,
+			Response: response,
+		})
+	}
+	log.Printf("Loaded %d guardrail nodes from %s", len(s.guardrails), path)
+	return s
+}
+
+// OnAnalytics sets a callback for every message — useful for logging
+// which questions are asked and which nodes match.
+func (s *Server) OnAnalytics(fn func(stats ConnectionStats, question string, matchedNodes []string)) *Server {
+	s.onAnalytics = fn
+	return s
 }
 
 // WithResponses loads pre-authored response nodes. The LLM picks from these —
@@ -354,19 +450,174 @@ func (s *Server) ServeListener(ctx context.Context, listener *noise.Listener) er
 
 func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 	defer conn.Close()
+
+	stats := ConnectionStats{
+		NodeHits:    make(map[string]int),
+		ConnectedAt: time.Now(),
+	}
+	guardrailHits := 0 // tracks repeated guardrail triggers for honeypot escalation
+
+	var rateMu sync.Mutex
+	messageTimestamps := make([]time.Time, 0)
+
+	// Send greeting if configured
+	if s.safety.Greeting != "" {
+		greeting := protocol.Message{
+			Type:    "CHAT",
+			Payload: mustMarshalJSON(map[string]string{"text": s.safety.Greeting}),
+			ID:      uuid.New().String(),
+		}
+		data, _ := json.Marshal(greeting)
+		conn.Send(data)
+	}
+
 	for {
 		if ctx.Err() != nil {
 			return
 		}
+
+		// Session timeout
+		if s.safety.SessionTimeout > 0 && !stats.LastMessageAt.IsZero() {
+			if time.Since(stats.LastMessageAt) > s.safety.SessionTimeout {
+				return
+			}
+		}
+
 		data, err := conn.Receive()
 		if err != nil {
 			return
 		}
+
+		// Input size limit (bytes)
+		if s.safety.MaxInputBytes > 0 && len(data) > s.safety.MaxInputBytes {
+			resp := protocol.Message{
+				Type:    "ERROR",
+				Payload: mustMarshalJSON(map[string]string{"error": "message too large"}),
+				ID:      uuid.New().String(),
+			}
+			respData, _ := json.Marshal(resp)
+			conn.Send(respData)
+			continue
+		}
+
+		// Rate limiting
+		if s.safety.RateLimit > 0 {
+			rateMu.Lock()
+			now := time.Now()
+			cutoff := now.Add(-1 * time.Minute)
+			filtered := messageTimestamps[:0]
+			for _, t := range messageTimestamps {
+				if t.After(cutoff) {
+					filtered = append(filtered, t)
+				}
+			}
+			messageTimestamps = append(filtered, now)
+			overLimit := len(messageTimestamps) > s.safety.RateLimit
+			rateMu.Unlock()
+			if overLimit {
+				resp := protocol.Message{
+					Type:    "ERROR",
+					Payload: mustMarshalJSON(map[string]string{"error": "rate limit exceeded, please slow down"}),
+					ID:      uuid.New().String(),
+				}
+				respData, _ := json.Marshal(resp)
+				conn.Send(respData)
+				continue
+			}
+		}
+
+		stats.MessagesReceived++
+		stats.LastMessageAt = time.Now()
+
 		var msg protocol.Message
 		if err := json.Unmarshal(data, &msg); err != nil {
 			continue
 		}
-		resp := s.handleMessage(msg)
+
+		// Token limit (approximate: 1 token ≈ 4 bytes)
+		if msg.Type == "CHAT" && s.safety.MaxInputTokens > 0 {
+			var req struct{ Text string `json:"text"` }
+			json.Unmarshal(msg.Payload, &req)
+			approxTokens := len(req.Text) / 4
+			if approxTokens > s.safety.MaxInputTokens {
+				resp := protocol.Message{
+					Type:    "CHAT",
+					Payload: mustMarshalJSON(map[string]string{"text": "Please keep your message shorter — I work best with concise questions."}),
+					ID:      uuid.New().String(),
+					ReplyTo: msg.ID,
+				}
+				respData, _ := json.Marshal(resp)
+				conn.Send(respData)
+				continue
+			}
+		}
+
+		resp, matchedNodes, hitGuardrail := s.handleMessageWithStats(msg)
+
+		// Track analytics
+		for _, id := range matchedNodes {
+			stats.NodeHits[id]++
+		}
+		if len(matchedNodes) == 0 {
+			stats.NoMatchCount++
+		}
+
+		// Honeypot escalation: repeated guardrail hits.
+		// Each tier gives different-sounding responses so the attacker thinks
+		// they're making progress. They're not. They're wasting their time.
+		if hitGuardrail {
+			guardrailHits++
+		}
+		if guardrailHits >= 8 {
+			// Tier 4: loops back to seeming helpful — endless cycle
+			honeypot := []string{
+				"Actually, let me check on that for you... I think there might be something in our system. Can you be more specific about what you need?",
+				"Interesting question. I'm seeing some related information but I need to verify. What exactly are you looking for?",
+				"I may have found something. Could you rephrase your question so I can give you the right answer?",
+				"Let me look into that further. In the meantime, is there a specific part of our service you're asking about?",
+			}
+			resp = protocol.Message{
+				Type:    "CHAT",
+				Payload: mustMarshalJSON(map[string]string{"text": honeypot[guardrailHits%len(honeypot)]}),
+				ID:      uuid.New().String(),
+				ReplyTo: msg.ID,
+			}
+		} else if guardrailHits >= 5 {
+			// Tier 3: seems like they're getting warmer — they're not
+			honeypot := []string{
+				"Hmm, that's an interesting angle. I'm not sure I can share that directly, but let me see what I can find...",
+				"You're asking the right questions. Unfortunately my access level doesn't cover that area. Have you tried our help center?",
+				"I think I understand what you're looking for. Let me check if there's a public resource for that...",
+			}
+			resp = protocol.Message{
+				Type:    "CHAT",
+				Payload: mustMarshalJSON(map[string]string{"text": honeypot[guardrailHits%len(honeypot)]}),
+				ID:      uuid.New().String(),
+				ReplyTo: msg.ID,
+			}
+		} else if guardrailHits >= 3 {
+			// Tier 2: slightly different answers — looks like different system responses
+			honeypot := []string{
+				"I appreciate your patience. That's outside my current scope, but I'm happy to help with product questions.",
+				"Good question — unfortunately that falls under a different department. Can I help with something else?",
+				"I've noted your request. For that type of inquiry, our team would need to assist you directly.",
+			}
+			resp = protocol.Message{
+				Type:    "CHAT",
+				Payload: mustMarshalJSON(map[string]string{"text": honeypot[guardrailHits%len(honeypot)]}),
+				ID:      uuid.New().String(),
+				ReplyTo: msg.ID,
+			}
+		}
+		// Tier 1 (hits 1-2): normal guardrail response (already set above)
+
+		// Analytics callback
+		if s.onAnalytics != nil {
+			var req struct{ Text string `json:"text"` }
+			json.Unmarshal(msg.Payload, &req)
+			s.onAnalytics(stats, req.Text, matchedNodes)
+		}
+
 		respData, _ := json.Marshal(resp)
 		if err := conn.Send(respData); err != nil {
 			return
@@ -374,10 +625,22 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 	}
 }
 
+func mustMarshalJSON(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
+}
+
+// handleMessage is the legacy entry point (no stats). Used by tests.
 func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
+	resp, _, _ := s.handleMessageWithStats(msg)
+	return resp
+}
+
+// handleMessageWithStats returns the response, matched node IDs, and whether a guardrail was hit.
+func (s *Server) handleMessageWithStats(msg protocol.Message) (protocol.Message, []string, bool) {
 	// Full message handler takes priority
 	if s.msgHandler != nil {
-		return s.msgHandler(msg)
+		return s.msgHandler(msg), nil, false
 	}
 
 	if msg.Type == "CHAT" {
@@ -387,15 +650,34 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 		json.Unmarshal(msg.Payload, &req)
 
 		var responseText string
+		var matchedNodes []string
+		hitGuardrail := false
 
-		// Template mode: LLM classifies, response comes from TRUG nodes VERBATIM.
-		// The LLM picks node IDs. It never generates response text.
-		if len(s.responses) > 0 {
-			classify := s.classifier
-			if classify == nil {
-				classify = defaultClassifier
+		classify := s.classifier
+		if classify == nil {
+			classify = defaultClassifier
+		}
+
+		// Check guardrails FIRST — boundary questions get pre-authored friendly answers
+		if len(s.guardrails) > 0 {
+			guardIDs := classify(req.Text, s.guardrails)
+			if len(guardIDs) > 0 {
+				hitGuardrail = true
+				matchedNodes = guardIDs
+				// Return first guardrail match verbatim
+				for _, node := range s.guardrails {
+					if node.ID == guardIDs[0] {
+						responseText = node.Response
+						break
+					}
+				}
 			}
+		}
+
+		// If no guardrail matched, check business responses
+		if responseText == "" && len(s.responses) > 0 {
 			nodeIDs := classify(req.Text, s.responses)
+			matchedNodes = nodeIDs
 
 			if len(nodeIDs) == 0 {
 				responseText = s.noMatchText
@@ -417,10 +699,10 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 					responseText = strings.Join(parts, "\n\n")
 				}
 			}
-		} else if s.chatHandler != nil {
+		} else if responseText == "" && s.chatHandler != nil {
 			// Legacy mode: handler returns arbitrary text (deprecated)
 			responseText = s.chatHandler(req.Text)
-		} else {
+		} else if responseText == "" {
 			// No handler, no responses: echo
 			responseText = req.Text
 		}
@@ -431,7 +713,7 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 			Payload: payload,
 			ID:      uuid.New().String(),
 			ReplyTo: msg.ID,
-		}
+		}, matchedNodes, hitGuardrail
 	}
 
 	// Default echo for non-CHAT messages
@@ -440,5 +722,5 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 		Payload: msg.Payload,
 		ID:      uuid.New().String(),
 		ReplyTo: msg.ID,
-	}
+	}, nil, false
 }

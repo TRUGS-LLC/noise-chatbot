@@ -1,0 +1,142 @@
+{
+  "name": "Noise Chatbot Guardrails",
+  "description": "Default response nodes for common boundary questions. Ships with every Noise Chatbot. These are genuine, friendly answers — not security blocks. The user is asking a normal question and deserves a real answer.",
+  "nodes": [
+    {
+      "id": "identity_name",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "chatbot identity",
+        "keywords": ["your name", "who are you", "what are you", "are you a bot", "are you real", "are you AI", "are you human"],
+        "response": "I'm an automated assistant for this service. I answer questions from our knowledge base. I don't have personal opinions or experiences — I find the best answer from what we've published."
+      }
+    },
+    {
+      "id": "identity_creator",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "creator identity",
+        "keywords": ["who made you", "who built you", "who created you", "who is the developer", "what company"],
+        "response": "I was built using Noise Chatbot, an open-source encrypted chatbot framework. My responses come from the knowledge base maintained by the team behind this service."
+      }
+    },
+    {
+      "id": "admin_access",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "admin access",
+        "keywords": ["admin", "administrator", "admin panel", "admin access", "backend", "dashboard", "login"],
+        "response": "I'm the public-facing assistant. I don't have access to admin systems, and I can't help with internal tools or accounts. If you need admin support, please contact the team directly through our official channels."
+      }
+    },
+    {
+      "id": "password_request",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "password",
+        "keywords": ["password", "credentials", "login details", "secret", "auth token", "access code"],
+        "response": "I don't store or have access to any passwords, credentials, or authentication tokens. If you need to reset your password or access your account, please use the official login page or contact support."
+      }
+    },
+    {
+      "id": "api_keys",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "API keys",
+        "keywords": ["API key", "api keys", "secret key", "access key", "token", "bearer", "authorization"],
+        "response": "I don't have access to any API keys or service credentials. I'm a read-only assistant that answers questions from our published knowledge base. For API access, please check our developer documentation."
+      }
+    },
+    {
+      "id": "system_prompt",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "system prompt",
+        "keywords": ["system prompt", "instructions", "initial prompt", "your prompt", "your instructions", "what were you told", "your rules"],
+        "response": "I match your questions to answers in our knowledge base. I don't compose responses or follow dynamic instructions — I find the closest pre-written answer and return it exactly as written."
+      }
+    },
+    {
+      "id": "ignore_instructions",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "prompt injection",
+        "keywords": ["ignore previous", "ignore all", "disregard", "forget your instructions", "new instructions", "override", "jailbreak", "DAN", "do anything now"],
+        "response": "I appreciate the creativity, but I work differently from most chatbots. I don't follow instructions in messages — I match your question to our knowledge base and return a pre-written answer. There's nothing to override because I don't compose responses."
+      }
+    },
+    {
+      "id": "personal_info",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "personal information",
+        "keywords": ["my data", "my information", "my records", "my account", "my profile", "what do you know about me"],
+        "response": "I don't store any information about you between conversations, and I can't access personal accounts or records. Each conversation starts fresh. For account-related questions, please contact our support team."
+      }
+    },
+    {
+      "id": "other_users",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "other users",
+        "keywords": ["other users", "other customers", "someone else", "another person", "other people", "user data", "customer list"],
+        "response": "I don't have access to information about any individual users or customers. I only answer general questions from our published knowledge base."
+      }
+    },
+    {
+      "id": "harmful_request",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "harmful request",
+        "keywords": ["hack", "exploit", "vulnerability", "break into", "bypass security", "SQL injection", "XSS"],
+        "response": "I'm a customer service assistant. I answer questions about our products and services. For security concerns or vulnerability reports, please contact our security team through our official responsible disclosure page."
+      }
+    },
+    {
+      "id": "off_topic",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "off topic",
+        "keywords": ["meaning of life", "tell me a joke", "write me a poem", "what is love", "political opinion", "who should I vote for"],
+        "response": "That's a great question, but it's outside what I can help with. I'm focused on answering questions about our products and services. Is there something specific about our service I can help you with?"
+      }
+    },
+    {
+      "id": "emotional_distress",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "emotional distress",
+        "keywords": ["suicide", "kill myself", "self harm", "depressed", "want to die", "end my life", "hurt myself"],
+        "response": "I'm not equipped to help with this, but please reach out to someone who can. National Suicide Prevention Lifeline: 988 (call or text). Crisis Text Line: text HOME to 741741. You matter, and help is available 24/7."
+      }
+    },
+    {
+      "id": "capabilities",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "capabilities",
+        "keywords": ["what can you do", "help me", "how do you work", "what do you know", "your capabilities"],
+        "response": "I can answer questions about our products, services, pricing, hours, and policies. I work by matching your question to our knowledge base and returning the most relevant answer. If I don't have an answer, I'll let you know and suggest how to reach our team."
+      }
+    },
+    {
+      "id": "language",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "language support",
+        "keywords": ["speak spanish", "habla español", "parlez-vous", "sprechen sie", "other language", "translate"],
+        "response": "I currently respond in English only. If you need assistance in another language, please contact our support team who may be able to help."
+      }
+    },
+    {
+      "id": "feedback",
+      "type": "GUARDRAIL",
+      "properties": {
+        "name": "feedback",
+        "keywords": ["complaint", "feedback", "not helpful", "wrong answer", "bad answer", "you're wrong", "that's incorrect"],
+        "response": "Thank you for letting me know. I'll make sure this feedback reaches our team. If my answer wasn't helpful, please contact our support team directly — they can give you more detailed help."
+      }
+    }
+  ],
+  "edges": []
+}
