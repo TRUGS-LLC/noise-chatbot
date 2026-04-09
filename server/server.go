@@ -1,5 +1,15 @@
 package server
 
+// <trl>
+// DEFINE "server" AS MODULE.
+// MODULE server CONTAINS FUNCTION New AND FUNCTION ListenAndServe
+//   AND FUNCTION OnChat AND FUNCTION WithResponses AND FUNCTION WithGuardrails.
+// MODULE server DEPENDS_ON MODULE noise AND MODULE protocol.
+// EACH RECORD message FROM ENTRY client SHALL ROUTE TO FUNCTION handleMessageFull.
+// FUNCTION handleMessageFull SHALL READ RECORD response FROM RECORD ResponseNode.
+// FUNCTION handleMessageFull SHALL_NOT WRITE ANY RECORD response 'that 'is NOT FROM RECORD ResponseNode.
+// </trl>
+
 import (
 	"context"
 	"encoding/json"
@@ -20,9 +30,9 @@ import (
 // ResponseNode is a pre-authored response in the TRUG. The LLM picks one.
 // The LLM never composes text — every word the user sees was written by a human.
 type ResponseNode struct {
-	ID       string `json:"id"`
+	ID       string   `json:"id"`
 	Keywords []string `json:"keywords"` // matching keywords for classification
-	Response string `json:"response"` // the exact text returned to the user
+	Response string   `json:"response"` // the exact text returned to the user
 }
 
 // Classifier picks one or more ResponseNode IDs given user text and available nodes.
@@ -47,12 +57,12 @@ type MessageHandler func(msg protocol.Message) protocol.Message
 // Template mode is the default when WithResponses is used. The LLM never touches the output.
 // SafetyConfig configures defensive options for the chatbot.
 type SafetyConfig struct {
-	MaxInputTokens   int           // max tokens per message (0 = unlimited, default 200)
-	MaxInputBytes    int           // max bytes per message (0 = unlimited, default 2000)
-	RateLimit        int           // max messages per minute per connection (0 = unlimited, default 30)
-	SessionTimeout   time.Duration // disconnect after idle time (0 = no timeout, default 30m)
-	Greeting         string        // first message sent on connect (empty = no greeting)
-	ConfidenceMin    int           // minimum keyword matches to respond (0 = any match, default 1)
+	MaxInputTokens int           // max tokens per message (0 = unlimited, default 200)
+	MaxInputBytes  int           // max bytes per message (0 = unlimited, default 2000)
+	RateLimit      int           // max messages per minute per connection (0 = unlimited, default 30)
+	SessionTimeout time.Duration // disconnect after idle time (0 = no timeout, default 30m)
+	Greeting       string        // first message sent on connect (empty = no greeting)
+	ConfidenceMin  int           // minimum keyword matches to respond (0 = any match, default 1)
 }
 
 // ConnectionStats tracks per-connection analytics.
@@ -82,15 +92,15 @@ type Server struct {
 	noMatchText        string     // returned when classifier finds no match
 
 	// Safety
-	safety       SafetyConfig
-	bannedKeys   map[string]time.Time // Noise public key → ban time
-	bannedMu     sync.RWMutex
+	safety     SafetyConfig
+	bannedKeys map[string]time.Time // Noise public key → ban time
+	bannedMu   sync.RWMutex
 
 	// Response formatting
 	contactFooter string // appended to every response (email, phone, URL)
 
 	// Analytics callback — called for every message
-	onAnalytics  func(stats ConnectionStats, question string, matchedNodes []string)
+	onAnalytics func(stats ConnectionStats, question string, matchedNodes []string)
 }
 
 // LLMConfig configures an LLM provider for classification.
@@ -518,8 +528,8 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 		NodeHits:    make(map[string]int),
 		ConnectedAt: time.Now(),
 	}
-	guardrailHits := 0    // tracks repeated guardrail triggers for honeypot
-	questionCount := 0     // tracks total questions for natural wind-down
+	guardrailHits := 0 // tracks repeated guardrail triggers for honeypot
+	questionCount := 0 // tracks total questions for natural wind-down
 
 	var rateMu sync.Mutex
 	messageTimestamps := make([]time.Time, 0)
@@ -600,7 +610,9 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 
 		// Token limit (approximate: 1 token ≈ 4 bytes)
 		if msg.Type == "CHAT" && s.safety.MaxInputTokens > 0 {
-			var req struct{ Text string `json:"text"` }
+			var req struct {
+				Text string `json:"text"`
+			}
 			json.Unmarshal(msg.Payload, &req)
 			approxTokens := len(req.Text) / 4
 			if approxTokens > s.safety.MaxInputTokens {
@@ -778,7 +790,9 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 
 		// Analytics callback
 		if s.onAnalytics != nil {
-			var req struct{ Text string `json:"text"` }
+			var req struct {
+				Text string `json:"text"`
+			}
 			json.Unmarshal(msg.Payload, &req)
 			s.onAnalytics(stats, req.Text, matchedNodes)
 		}

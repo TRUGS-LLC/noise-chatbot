@@ -1,0 +1,11 @@
+# Binaries
+noise-helper-*
+echo
+faq
+graph
+llm
+*.exe
+
+# Go
+*.test
+*.out

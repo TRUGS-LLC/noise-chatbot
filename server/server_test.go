@@ -318,7 +318,9 @@ func TestLLMNeverGeneratesText(t *testing.T) {
 	}
 	resp := s.handleMessage(msg)
 
-	var payload struct{ Text string `json:"text"` }
+	var payload struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp.Payload, &payload)
 
 	// The response MUST be either the node response or the noMatchText
@@ -416,7 +418,9 @@ func TestHoneypotResponseChanges(t *testing.T) {
 			guardrailHits++
 		}
 
-		var payload struct{ Text string `json:"text"` }
+		var payload struct {
+			Text string `json:"text"`
+		}
 		json.Unmarshal(resp.Payload, &payload)
 
 		// Apply honeypot tier overrides (same logic as serveConn)
@@ -557,7 +561,9 @@ func TestWindDown40Goodbye(t *testing.T) {
 		}
 		var resp protocol.Message
 		json.Unmarshal(respData, &resp)
-		var payload struct{ Text string `json:"text"` }
+		var payload struct {
+			Text string `json:"text"`
+		}
 		json.Unmarshal(resp.Payload, &payload)
 		lastResp = payload.Text
 	}
@@ -654,7 +660,9 @@ func TestInputSizeLimit(t *testing.T) {
 	if resp.Type != "ERROR" {
 		t.Fatalf("expected ERROR type, got %q", resp.Type)
 	}
-	var payload struct{ Error string `json:"error"` }
+	var payload struct {
+		Error string `json:"error"`
+	}
 	json.Unmarshal(resp.Payload, &payload)
 	if !contains(payload.Error, "too large") {
 		t.Fatalf("expected 'too large' error, got %q", payload.Error)
@@ -684,7 +692,9 @@ func TestGreeting(t *testing.T) {
 	if resp.Type != "CHAT" {
 		t.Fatalf("greeting type = %q, want CHAT", resp.Type)
 	}
-	var payload struct{ Text string `json:"text"` }
+	var payload struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp.Payload, &payload)
 	if !contains(payload.Text, "Welcome to our chatbot") {
 		t.Fatalf("greeting = %q, want welcome text", payload.Text)
@@ -711,7 +721,9 @@ func TestMatchCap3(t *testing.T) {
 		t.Fatalf("expected at most 3 matched nodes, got %d: %v", len(matchedNodes), matchedNodes)
 	}
 
-	var payload struct{ Text string `json:"text"` }
+	var payload struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp.Payload, &payload)
 
 	// Count how many response markers appear
@@ -747,7 +759,9 @@ func TestFallbackClassifier(t *testing.T) {
 
 	// questionCount=5 (under 20) — fallback classifier should fire
 	resp1, matched1, _ := s.handleMessageFull(msg, 5)
-	var p1 struct{ Text string `json:"text"` }
+	var p1 struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp1.Payload, &p1)
 
 	if len(matched1) == 0 || matched1[0] != "node1" {
@@ -759,7 +773,9 @@ func TestFallbackClassifier(t *testing.T) {
 
 	// questionCount=25 (over 20) — fallback classifier should NOT fire
 	resp2, matched2, _ := s.handleMessageFull(msg, 25)
-	var p2 struct{ Text string `json:"text"` }
+	var p2 struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp2.Payload, &p2)
 
 	if len(matched2) != 0 {
@@ -784,7 +800,9 @@ func TestContactFooter(t *testing.T) {
 	// questionCount=1 so the footer formatting is applied
 	resp, _, _ := s.handleMessageFull(msg, 1)
 
-	var payload struct{ Text string `json:"text"` }
+	var payload struct {
+		Text string `json:"text"`
+	}
 	json.Unmarshal(resp.Payload, &payload)
 
 	if !contains(payload.Text, "hello@example.com") {

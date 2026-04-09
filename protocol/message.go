@@ -1,5 +1,11 @@
 package protocol
 
+// <trl>
+// DEFINE "protocol" AS MODULE.
+// MODULE protocol CONTAINS RECORD Message.
+// RECORD Message CONTAINS STRING type AND DATA payload AND STRING id AND OPTIONAL STRING reply_to.
+// </trl>
+
 import "encoding/json"
 
 // Message is the wire format for all Noise Chatbot communication.
