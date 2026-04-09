@@ -468,7 +468,8 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 		NodeHits:    make(map[string]int),
 		ConnectedAt: time.Now(),
 	}
-	guardrailHits := 0 // tracks repeated guardrail triggers for honeypot escalation
+	guardrailHits := 0    // tracks repeated guardrail triggers for honeypot
+	questionCount := 0     // tracks total questions for natural wind-down
 
 	var rateMu sync.Mutex
 	messageTimestamps := make([]time.Time, 0)
@@ -573,6 +574,53 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 		}
 		if len(matchedNodes) == 0 {
 			stats.NoMatchCount++
+		}
+
+		// Count total questions (CHAT messages only)
+		if msg.Type == "CHAT" {
+			questionCount++
+		}
+
+		// Natural wind-down: after 20 questions, start slowing down.
+		// A real user gets a helpful summary with links. An attacker gets tar-pitted.
+		if questionCount >= 20 && !hitGuardrail && msg.Type == "CHAT" {
+			// Slow down: add delay that grows with each question past 20
+			extraQuestions := questionCount - 20
+			delay := time.Duration(extraQuestions) * 2 * time.Second
+			if delay > 30*time.Second {
+				delay = 30 * time.Second
+			}
+			if delay > 0 {
+				time.Sleep(delay)
+			}
+
+			// At exactly 20: offer a helpful summary with topics covered
+			if questionCount == 20 {
+				var topics []string
+				for nodeID := range stats.NodeHits {
+					for _, node := range s.responses {
+						if node.ID == nodeID && len(node.Keywords) > 0 {
+							topics = append(topics, node.Keywords[0])
+							break
+						}
+					}
+				}
+				summary := "We've covered a lot! Here's what we discussed: "
+				if len(topics) > 0 {
+					summary += strings.Join(topics, ", ") + ". "
+				}
+				summary += "You can find more detail on all of these on our website. I'm still here if you have more questions!"
+
+				resp = protocol.Message{
+					Type:    "CHAT",
+					Payload: mustMarshalJSON(map[string]string{"text": summary}),
+					ID:      uuid.New().String(),
+					ReplyTo: msg.ID,
+				}
+			}
+			// After 20: normal answers continue, just slower.
+			// A real user recognizes they have what they need and leaves.
+			// An attacker thinks the slowness means they're making progress.
 		}
 
 		// Honeypot escalation: repeated guardrail hits.
