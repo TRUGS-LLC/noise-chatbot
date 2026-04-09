@@ -457,11 +457,18 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 	// Check if this Noise key is banned
 	keyHex := noise.KeyToHex(conn.RemoteIdentity())
 	s.bannedMu.RLock()
-	_, banned := s.bannedKeys[keyHex]
+	banTime, banned := s.bannedKeys[keyHex]
 	s.bannedMu.RUnlock()
 	if banned {
-		// Silently close — no response, no acknowledgment
-		return
+		// Permanent ban (honeypot tier 5) — never expires
+		// Temporary ban (question limit) — expires after 3 days
+		if banTime.IsZero() || time.Since(banTime) < 72*time.Hour {
+			return // silently close
+		}
+		// Ban expired — remove and allow
+		s.bannedMu.Lock()
+		delete(s.bannedKeys, keyHex)
+		s.bannedMu.Unlock()
 	}
 
 	stats := ConnectionStats{
@@ -591,7 +598,7 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 				time.Sleep(delay)
 			}
 
-			// At 40+: goodbye and close (but don't ban — could be legitimate)
+			// At 40+: goodbye, close, 3-day temporary ban
 			if questionCount >= 40 {
 				farewell := protocol.Message{
 					Type:    "CHAT",
@@ -601,7 +608,14 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 				}
 				farewellData, _ := json.Marshal(farewell)
 				conn.Send(farewellData)
-				return // close connection, no ban
+
+				// 3-day temporary ban — they can come back after
+				s.bannedMu.Lock()
+				s.bannedKeys[keyHex] = time.Now()
+				s.bannedMu.Unlock()
+				log.Printf("Temp-banned key %s for 3 days (40 questions reached)", keyHex[:16])
+
+				return
 			}
 
 			// At exactly 20: offer a helpful summary with topics covered
