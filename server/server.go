@@ -565,8 +565,26 @@ func (s *Server) serveConn(ctx context.Context, conn *noise.NoiseConn) {
 		// Honeypot escalation: repeated guardrail hits.
 		// Each tier gives different-sounding responses so the attacker thinks
 		// they're making progress. They're not. They're wasting their time.
+		// Response delay increases with each tier — looks like a slow server,
+		// actually just wasting the attacker's time while freeing our resources.
 		if hitGuardrail {
 			guardrailHits++
+		}
+		if guardrailHits >= 3 {
+			// Tier 2+: add delay. Looks like the server is "thinking" or "searching".
+			// Tier 2 (3-4 hits): 3 seconds
+			// Tier 3 (5-7 hits): 8 seconds
+			// Tier 4 (8+ hits):  15 seconds
+			var delay time.Duration
+			switch {
+			case guardrailHits >= 8:
+				delay = 15 * time.Second
+			case guardrailHits >= 5:
+				delay = 8 * time.Second
+			default:
+				delay = 3 * time.Second
+			}
+			time.Sleep(delay)
 		}
 		if guardrailHits >= 8 {
 			// Tier 4: loops back to seeming helpful — endless cycle
