@@ -1,0 +1,2274 @@
+{
+  "name": "noise_chatbot.super.trug",
+  "version": "1.0.0",
+  "type": "SUPER_TRUG",
+  "dimensions": {
+    "code": {
+      "description": "The production code surface of the Go noise-chatbot implementation, spanning 6 packages, plus concurrency and pipeline structure."
+    }
+  },
+  "capabilities": {
+    "extensions": [],
+    "vocabularies": [
+      "TRL-190"
+    ],
+    "profiles": [
+      "super_trug"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "root_project",
+      "type": "NAMESPACE",
+      "properties": {
+        "name": "noise_chatbot.super.trug.json",
+        "source_repo": "github.com/TRUGS-LLC/noise-chatbot",
+        "go_module": "github.com/TRUGS-LLC/noise-chatbot",
+        "go_version": "1.24.0",
+        "license": "Apache-2.0",
+        "description": "Standalone black-box specification of the Go noise-chatbot implementation \u2014 super-TRUG for Python rewrite. Encrypted chatbot framework using Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b).",
+        "phase": "A3",
+        "inputs": [
+          "REFERENCE/A1_inventory.md",
+          "REFERENCE/A2_trl_sentences.md"
+        ],
+        "inventory_counts": {
+          "exported_symbols": 55,
+          "exported_funcs_methods": 40,
+          "exported_types": 13,
+          "exported_vars": 2,
+          "unexported_routing_funcs": 10,
+          "binaries": 5,
+          "packages": 6
+        },
+        "external_deps": {
+          "github.com/flynn/noise": "v1.1.0",
+          "github.com/google/uuid": "v1.6.0"
+        }
+      },
+      "parent_id": null,
+      "contains": [
+        "mod_noise",
+        "mod_protocol",
+        "mod_server",
+        "mod_client",
+        "mod_helper",
+        "mod_examples"
+      ],
+      "metric_level": "MEGA_NAMESPACE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_noise",
+      "type": "MODULE",
+      "properties": {
+        "package": "noise",
+        "path": "noise/",
+        "role": "Noise_IK TCP transport (handshake + length-prefixed framed encryption)."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "rec_DHKey",
+        "rec_NoiseConn",
+        "rec_Listener",
+        "res_CipherSuite",
+        "fn_GenerateKeypair",
+        "fn_KeyToHex",
+        "fn_HexToKey",
+        "fn_NoiseConn_Send",
+        "fn_NoiseConn_Receive",
+        "fn_NoiseConn_Close",
+        "fn_NoiseConn_RemoteIdentity",
+        "fn_Dial",
+        "fn_ClientHandshake",
+        "fn_Listen",
+        "fn_Listener_Accept",
+        "fn_Listener_Close",
+        "fn_Listener_Addr",
+        "fn_ServerHandshake",
+        "fn_writeFrame",
+        "fn_readFrame"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_protocol",
+      "type": "MODULE",
+      "properties": {
+        "package": "protocol",
+        "path": "protocol/",
+        "role": "Wire envelope Message type (JSON)."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "rec_Message"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_server",
+      "type": "MODULE",
+      "properties": {
+        "package": "server",
+        "path": "server/",
+        "role": "Chatbot server \u2014 template-mode LLM classification + honeypot + wind-down."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "rec_ResponseNode",
+        "rec_Classifier",
+        "rec_ChatHandler",
+        "rec_MessageHandler",
+        "rec_SafetyConfig",
+        "rec_ConnectionStats",
+        "rec_LLMConfig",
+        "svc_Server",
+        "res_DefaultGuardrails",
+        "fn_New",
+        "fn_Server_WithSafety",
+        "fn_Server_WithGreeting",
+        "fn_Server_WithGuardrails",
+        "fn_Server_OnAnalytics",
+        "fn_Server_WithResponses",
+        "fn_Server_WithResponsesFromTRUG",
+        "fn_Server_WithClassifier",
+        "fn_Server_WithFallbackClassifier",
+        "fn_Server_WithNoMatch",
+        "fn_Server_WithContactFooter",
+        "fn_Server_OnChat",
+        "fn_Server_OnMessage",
+        "fn_Server_WithTRUG",
+        "fn_Server_WithLLM",
+        "fn_Server_WithUpstream",
+        "fn_Server_Key",
+        "fn_Server_PublicKey",
+        "fn_Server_GetTRUGContext",
+        "fn_Server_GetResponses",
+        "fn_Server_ListenAndServe",
+        "fn_Server_ServeListener",
+        "fn_defaultClassifier",
+        "fn_Server_buildTRUGContext",
+        "fn_Server_serveConn",
+        "fn_Server_handleMessage",
+        "fn_Server_handleMessageWithStats",
+        "fn_Server_handleMessageFull",
+        "fn_mustMarshalJSON",
+        "stage_serveConn",
+        "stage_handleMessageFull",
+        "proc_signal_handler",
+        "proc_ctx_closer",
+        "proc_accept_loop",
+        "proc_serveConn_worker",
+        "stream_sigCh",
+        "stream_ctx"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_client",
+      "type": "MODULE",
+      "properties": {
+        "package": "client",
+        "path": "client/",
+        "role": "Go client library."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "rec_Client",
+        "fn_Connect",
+        "fn_Client_Chat",
+        "fn_Client_Send",
+        "fn_Client_Close",
+        "fn_client_mustMarshal"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_helper",
+      "type": "MODULE",
+      "properties": {
+        "package": "helper",
+        "path": "helper/",
+        "role": "stdin/stdout Noise_IK bridge binary (noise-helper) for non-Go clients."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "iface_helper_cli",
+        "fn_helper_main",
+        "fn_helper_reader",
+        "proc_helper_reader",
+        "proc_helper_main",
+        "res_flag_server",
+        "res_flag_key"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "mod_examples",
+      "type": "MODULE",
+      "properties": {
+        "package": "examples",
+        "path": "examples/",
+        "role": "Four example binaries: echo, faq, llm, graph."
+      },
+      "parent_id": "root_project",
+      "contains": [
+        "iface_echo",
+        "iface_faq",
+        "iface_llm",
+        "iface_graph"
+      ],
+      "metric_level": "KILO_MODULE",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_DHKey",
+      "type": "RECORD",
+      "properties": {
+        "name": "DHKey",
+        "kind": "type-alias",
+        "go_type": "noiselib.DHKey",
+        "fields": [
+          "public",
+          "private"
+        ],
+        "trl": "DEFINE RECORD DHKey CONTAINS STRING public AND STRING private.",
+        "notes": "Re-export of flynn/noise static keypair type."
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_NoiseConn",
+      "type": "RECORD",
+      "properties": {
+        "name": "NoiseConn",
+        "kind": "struct",
+        "fields": [
+          "conn",
+          "encrypt",
+          "decrypt",
+          "remote"
+        ],
+        "concurrency_safe": true,
+        "concurrency_impl": "sync.Mutex mu (writes) + sync.Mutex rmu (reads) \u2014 two separate mutexes permit concurrent read+write",
+        "trl": "DEFINE RECORD NoiseConn CONTAINS RESOURCE conn AND DATA encrypt AND DATA decrypt AND STRING remote.",
+        "vocab_gap": "sync.Mutex fields mu/rmu \u2014 no TRL word for lock primitive; encoded as properties only."
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_Listener",
+      "type": "RECORD",
+      "properties": {
+        "name": "Listener",
+        "kind": "struct",
+        "fields": [
+          "inner",
+          "serverKey"
+        ],
+        "trl": "DEFINE RECORD Listener CONTAINS RESOURCE inner AND RECORD serverKey."
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "res_CipherSuite",
+      "type": "RESOURCE",
+      "properties": {
+        "name": "CipherSuite",
+        "kind": "package-var",
+        "immutable": true,
+        "contents": "NewCipherSuite(DH25519, CipherChaChaPoly, HashBLAKE2b)",
+        "trl": "DEFINE RESOURCE CipherSuite AS IMMUTABLE DATA.",
+        "notes": "Fixed cipher suite \u2014 no negotiation."
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_RESOURCE",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_GenerateKeypair",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "GenerateKeypair",
+        "package": "noise",
+        "source_file": "noise.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_KeyToHex",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "KeyToHex",
+        "package": "noise",
+        "source_file": "noise.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_HexToKey",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "HexToKey",
+        "package": "noise",
+        "source_file": "noise.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_NoiseConn_Send",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*NoiseConn).Send",
+        "package": "noise",
+        "source_file": "conn.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_NoiseConn_Receive",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*NoiseConn).Receive",
+        "package": "noise",
+        "source_file": "conn.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_NoiseConn_Close",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*NoiseConn).Close",
+        "package": "noise",
+        "source_file": "conn.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_NoiseConn_RemoteIdentity",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*NoiseConn).RemoteIdentity",
+        "package": "noise",
+        "source_file": "conn.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Dial",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "Dial",
+        "package": "noise",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_ClientHandshake",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "ClientHandshake",
+        "package": "noise",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Listen",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "Listen",
+        "package": "noise",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Listener_Accept",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Listener).Accept",
+        "package": "noise",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Listener_Close",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Listener).Close",
+        "package": "noise",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Listener_Addr",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Listener).Addr",
+        "package": "noise",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_ServerHandshake",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "ServerHandshake",
+        "package": "noise",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_writeFrame",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "writeFrame",
+        "package": "noise",
+        "source_file": "frame.go",
+        "exported": false,
+        "kind": "top-level-unexported",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_readFrame",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "readFrame",
+        "package": "noise",
+        "source_file": "frame.go",
+        "exported": false,
+        "kind": "top-level-unexported",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_noise",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_Message",
+      "type": "RECORD",
+      "properties": {
+        "name": "Message",
+        "kind": "struct",
+        "fields": [
+          "Type",
+          "Payload",
+          "ID",
+          "ReplyTo"
+        ],
+        "field_types": {
+          "Type": "string",
+          "Payload": "json.RawMessage",
+          "ID": "string",
+          "ReplyTo": "string (omitempty)"
+        },
+        "known_type_values": [
+          "CHAT",
+          "ERROR"
+        ],
+        "known_payload_shapes": {
+          "CHAT": "{text: string}",
+          "ERROR": "{error: string}"
+        },
+        "trl": "DEFINE RECORD Message CONTAINS STRING type AND DATA payload AND STRING id AND OPTIONAL STRING reply_to."
+      },
+      "parent_id": "mod_protocol",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_ResponseNode",
+      "type": "RECORD",
+      "properties": {
+        "name": "ResponseNode",
+        "kind": "struct",
+        "fields": [
+          "ID",
+          "Keywords",
+          "Response"
+        ],
+        "trl": "DEFINE RECORD ResponseNode CONTAINS STRING id AND ARRAY keywords AND STRING response."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_Classifier",
+      "type": "RECORD",
+      "properties": {
+        "name": "Classifier",
+        "kind": "func-type",
+        "signature": "func(userText string, nodes []ResponseNode) []string",
+        "trl": "DEFINE FUNCTION Classifier SHALL MAP STRING userText AND ARRAY nodes AS ARRAY ids."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_ChatHandler",
+      "type": "RECORD",
+      "properties": {
+        "name": "ChatHandler",
+        "kind": "func-type-DEPRECATED",
+        "signature": "func(text string) string",
+        "trl": "DEFINE FUNCTION ChatHandler SHALL MAP STRING text AS STRING response.",
+        "deprecated": true
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_MessageHandler",
+      "type": "RECORD",
+      "properties": {
+        "name": "MessageHandler",
+        "kind": "func-type",
+        "signature": "func(msg protocol.Message) protocol.Message",
+        "trl": "DEFINE FUNCTION MessageHandler SHALL MAP RECORD Message AS RECORD Message."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_SafetyConfig",
+      "type": "RECORD",
+      "properties": {
+        "name": "SafetyConfig",
+        "kind": "struct",
+        "fields": [
+          "MaxInputTokens",
+          "MaxInputBytes",
+          "RateLimit",
+          "SessionTimeout",
+          "Greeting",
+          "ConfidenceMin"
+        ],
+        "trl": "DEFINE RECORD SafetyConfig CONTAINS INTEGER MaxInputTokens AND INTEGER MaxInputBytes AND INTEGER RateLimit AND INTEGER SessionTimeout AND STRING Greeting AND INTEGER ConfidenceMin."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_ConnectionStats",
+      "type": "RECORD",
+      "properties": {
+        "name": "ConnectionStats",
+        "kind": "struct",
+        "fields": [
+          "MessagesReceived",
+          "NodeHits",
+          "NoMatchCount",
+          "ConnectedAt",
+          "LastMessageAt"
+        ],
+        "trl": "DEFINE RECORD ConnectionStats CONTAINS INTEGER MessagesReceived AND OBJECT NodeHits AND INTEGER NoMatchCount AND DATA ConnectedAt AND DATA LastMessageAt."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_LLMConfig",
+      "type": "RECORD",
+      "properties": {
+        "name": "LLMConfig",
+        "kind": "struct",
+        "fields": [
+          "Provider",
+          "Model",
+          "APIKeyEnv"
+        ],
+        "trl": "DEFINE RECORD LLMConfig CONTAINS STRING Provider AND STRING Model AND STRING APIKeyEnv."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "svc_Server",
+      "type": "SERVICE",
+      "properties": {
+        "name": "Server",
+        "kind": "struct",
+        "role": "long-running chatbot server with template-mode classification",
+        "addr_default_example": ":9090",
+        "auto_keygen_on_new": true,
+        "default_safety": {
+          "MaxInputTokens": 200,
+          "MaxInputBytes": 2000,
+          "RateLimit": 30,
+          "SessionTimeout_minutes": 30,
+          "ConfidenceMin": 1
+        },
+        "default_no_match_text": "I don't have information about that. Please contact us directly.",
+        "loads_default_guardrails_on_new": true,
+        "trl": "DEFINE SERVICE Server CONTAINS RECORD key AND FUNCTION chatHandler AND FUNCTION msgHandler AND ARRAY responses AND ARRAY guardrails AND FUNCTION classifier AND FUNCTION fallbackClassifier AND RECORD safety AND OBJECT bannedKeys AND FUNCTION onAnalytics.",
+        "vocab_gaps": [
+          "Builder pattern (*Server\u2192*Server chain) \u2014 encode as builder_chain: true on each With*/On* FUNCTION.",
+          "sync.RWMutex bannedMu / sync.Mutex rateMu \u2014 encoded as properties only."
+        ]
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "HECTO_SERVICE",
+      "dimension": "code"
+    },
+    {
+      "id": "res_DefaultGuardrails",
+      "type": "RESOURCE",
+      "properties": {
+        "name": "DefaultGuardrails",
+        "kind": "package-var",
+        "immutable_source": true,
+        "count": 15,
+        "entries": [
+          "guard-identity",
+          "guard-creator",
+          "guard-admin",
+          "guard-password",
+          "guard-apikey",
+          "guard-prompt",
+          "guard-inject",
+          "guard-personal",
+          "guard-others",
+          "guard-harmful",
+          "guard-offtopic",
+          "guard-distress",
+          "guard-capabilities",
+          "guard-language",
+          "guard-feedback"
+        ],
+        "trl": "DEFINE RESOURCE DefaultGuardrails AS ARRAY OF RECORD ResponseNode CONTAINS 15 RECORD.",
+        "duplicate_source_note": "15 entries are also in guardrails.trug.json (disk copy, additively loaded via WithGuardrails)."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_RESOURCE",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_New",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "New",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "constructor",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithSafety",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithSafety",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithGreeting",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithGreeting",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithGuardrails",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithGuardrails",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_OnAnalytics",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).OnAnalytics",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithResponses",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithResponses",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithResponsesFromTRUG",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithResponsesFromTRUG",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithClassifier",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithClassifier",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithFallbackClassifier",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithFallbackClassifier",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithNoMatch",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithNoMatch",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithContactFooter",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithContactFooter",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_OnChat",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).OnChat",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder-DEPRECATED",
+        "builder_chain": true,
+        "deprecated": true,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_OnMessage",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).OnMessage",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithTRUG",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithTRUG",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithLLM",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithLLM",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_WithUpstream",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).WithUpstream",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "builder-STUB",
+        "builder_chain": true,
+        "deprecated": false,
+        "stub": true
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_Key",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).Key",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "getter",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_PublicKey",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).PublicKey",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "getter",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_GetTRUGContext",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).GetTRUGContext",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "getter",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_GetResponses",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).GetResponses",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "getter",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_ListenAndServe",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).ListenAndServe",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "lifecycle",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_ServeListener",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).ServeListener",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": true,
+        "kind": "lifecycle",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_defaultClassifier",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "defaultClassifier",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "routing",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_buildTRUGContext",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).buildTRUGContext",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "helper",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_serveConn",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).serveConn",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "worker",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_handleMessage",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).handleMessage",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "routing-thin-wrapper",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_handleMessageWithStats",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).handleMessageWithStats",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "routing-thin-wrapper",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Server_handleMessageFull",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Server).handleMessageFull",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "routing-core",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_mustMarshalJSON",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "mustMarshalJSON",
+        "package": "server",
+        "source_file": "server.go",
+        "exported": false,
+        "kind": "helper",
+        "builder_chain": false,
+        "deprecated": false,
+        "stub": false
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "stage_serveConn",
+      "type": "STAGE",
+      "properties": {
+        "name": "serveConn",
+        "pipeline_stages": [
+          "ban_check",
+          "greet",
+          "receive",
+          "validate",
+          "classify",
+          "wind_down",
+          "honeypot",
+          "send"
+        ],
+        "state": {
+          "stats": "ConnectionStats per connection",
+          "messageTimestamps": "sliding 1-minute rate window (per conn)",
+          "guardrailHits": "counter for honeypot escalation",
+          "questionCount": "counter for wind-down triggers"
+        },
+        "trl_block": "See REFERENCE/A2_trl_sentences.md \u00a7Pipeline \u2014 serveConn"
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_STAGE",
+      "dimension": "code"
+    },
+    {
+      "id": "stage_handleMessageFull",
+      "type": "STAGE",
+      "properties": {
+        "name": "handleMessageFull",
+        "pipeline_stages": [
+          "msgHandler_override",
+          "guardrail_check",
+          "responses_classify",
+          "fallback_llm",
+          "match_cap",
+          "format"
+        ],
+        "formatting_rules": {
+          "prefix_when_q_gt_0": "You asked about: {text}\\n\\n{response}",
+          "contact_footer": "{response}\\n\\n{contactFooter}",
+          "count_suffix": "{response}\\n\\n({questionCount})"
+        },
+        "trl_block": "See REFERENCE/A2_trl_sentences.md \u00a7Pipeline \u2014 handleMessageFull"
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "DEKA_STAGE",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_signal_handler",
+      "type": "PROCESS",
+      "properties": {
+        "name": "signal_handler",
+        "parallel": true,
+        "spawned_from": "fn_Server_ListenAndServe",
+        "waits_on": "stream_sigCh",
+        "signals": [
+          "SIGINT",
+          "SIGTERM"
+        ],
+        "action_on_signal": "cancel root context and close listener",
+        "vocab_gap": "goroutine / OS-signal plumbing not in TRL \u2014 encoded as properties."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_ctx_closer",
+      "type": "PROCESS",
+      "properties": {
+        "name": "ctx_closer",
+        "parallel": true,
+        "spawned_from": "fn_Server_ServeListener",
+        "waits_on": "stream_ctx",
+        "action_on_done": "close listener"
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_accept_loop",
+      "type": "PROCESS",
+      "properties": {
+        "name": "accept_loop",
+        "parallel": false,
+        "role": "main accept loop in ListenAndServe / ServeListener; spawns per-connection workers",
+        "per_event_parallelism": "spawns proc_serveConn_worker per accepted connection",
+        "vocab_gap": "'one goroutine per accepted connection' \u2014 PARALLEL adverb is coarse; no TRL for per-event spawn."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_serveConn_worker",
+      "type": "PROCESS",
+      "properties": {
+        "name": "serveConn_worker",
+        "parallel": true,
+        "spawned_per": "connection",
+        "body": "stage_serveConn",
+        "lifecycle": "until recv error, ctx cancel, session timeout, or honeypot/wind-down ban"
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "stream_sigCh",
+      "type": "STREAM",
+      "properties": {
+        "name": "sigCh",
+        "capacity": 1,
+        "element_type": "os.Signal",
+        "created_by": "fn_Server_ListenAndServe",
+        "signals_registered": [
+          "SIGINT",
+          "SIGTERM"
+        ]
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_STREAM",
+      "dimension": "code"
+    },
+    {
+      "id": "stream_ctx",
+      "type": "STREAM",
+      "properties": {
+        "name": "ctx",
+        "element_type": "context.Context",
+        "role": "root cancellation tree; feeds signal_handler and serveConn_worker",
+        "vocab_gap": "context.Context hierarchical cancellation \u2014 no TRL primitive."
+      },
+      "parent_id": "mod_server",
+      "contains": [],
+      "metric_level": "BASE_STREAM",
+      "dimension": "code"
+    },
+    {
+      "id": "rec_Client",
+      "type": "RECORD",
+      "properties": {
+        "name": "Client",
+        "kind": "struct",
+        "fields": [
+          "conn"
+        ],
+        "trl": "DEFINE RECORD Client CONTAINS RECORD conn."
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "DEKA_RECORD",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Connect",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "Connect",
+        "package": "client",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "top-level",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Client_Chat",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Client).Chat",
+        "package": "client",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Client_Send",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Client).Send",
+        "package": "client",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_Client_Close",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "(*Client).Close",
+        "package": "client",
+        "source_file": "client.go",
+        "exported": true,
+        "kind": "method",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_client_mustMarshal",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "mustMarshal",
+        "package": "client",
+        "source_file": "client.go",
+        "exported": false,
+        "kind": "helper",
+        "error_pattern": "fmt.Errorf wrapping via %w"
+      },
+      "parent_id": "mod_client",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "iface_helper_cli",
+      "type": "INTERFACE",
+      "properties": {
+        "name": "noise-helper",
+        "kind": "cli-binary",
+        "build_cmd": "go build -o noise-helper ./helper",
+        "flags": {
+          "--server": {
+            "type": "string",
+            "default": "localhost:9090",
+            "required": false
+          },
+          "--key": {
+            "type": "string",
+            "required": true,
+            "format": "hex-32-bytes"
+          }
+        },
+        "stdout_contract": {
+          "CONNECTED": "printed after successful handshake",
+          "message_out": "raw JSON received from server + \\n"
+        },
+        "stderr_contract": {
+          "ERROR: ...": "printed on setup/send/recv failures"
+        },
+        "exit_codes": {
+          "clean_recv_eof": 0,
+          "setup_or_send_error": 1,
+          "missing_key": 1
+        },
+        "stdin_buffer_bytes": 16777216,
+        "trl": "DEFINE INTERFACE noise-helper CONTAINS ENTRY stdin AND EXIT stdout AND EXIT stderr."
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "DEKA_INTERFACE",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_helper_main",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "main",
+        "package": "helper",
+        "source_file": "helper/main.go",
+        "exported": false,
+        "kind": "binary-entry-point",
+        "role": "parse flags \u2192 handshake \u2192 spawn reader goroutine \u2192 stdin scan loop"
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "fn_helper_reader",
+      "type": "FUNCTION",
+      "properties": {
+        "name": "reader-goroutine-closure",
+        "package": "helper",
+        "source_file": "helper/main.go",
+        "exported": false,
+        "kind": "goroutine-closure",
+        "role": "receive from server, write to stdout, os.Exit(0) on recv error (EOF = clean)"
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_FUNCTION",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_helper_reader",
+      "type": "PROCESS",
+      "properties": {
+        "name": "helper_reader",
+        "parallel": true,
+        "body": "fn_helper_reader",
+        "lifecycle": "until server disconnects"
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "proc_helper_main",
+      "type": "PROCESS",
+      "properties": {
+        "name": "helper_main",
+        "parallel": false,
+        "role": "main stdin\u2192server loop (bufio.Scanner with 16 MiB buffer)"
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_PROCESS",
+      "dimension": "code"
+    },
+    {
+      "id": "res_flag_server",
+      "type": "RESOURCE",
+      "properties": {
+        "name": "--server",
+        "flag_type": "string",
+        "default": "localhost:9090",
+        "required": false
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_RESOURCE",
+      "dimension": "code"
+    },
+    {
+      "id": "res_flag_key",
+      "type": "RESOURCE",
+      "properties": {
+        "name": "--key",
+        "flag_type": "string",
+        "required": true,
+        "format": "hex-encoded 32-byte Curve25519 public key"
+      },
+      "parent_id": "mod_helper",
+      "contains": [],
+      "metric_level": "BASE_RESOURCE",
+      "dimension": "code"
+    },
+    {
+      "id": "iface_echo",
+      "type": "INTERFACE",
+      "properties": {
+        "name": "echo",
+        "kind": "example-binary",
+        "source_file": "examples/echo/main.go",
+        "description": "OnChat echoes input",
+        "role": "simplest bot \u2014 echoes input",
+        "listen_addr": ":9090",
+        "handler": "OnChat(text => \"You said: \" + text)",
+        "external_input": null
+      },
+      "parent_id": "mod_examples",
+      "contains": [],
+      "metric_level": "DEKA_INTERFACE",
+      "dimension": "code"
+    },
+    {
+      "id": "iface_faq",
+      "type": "INTERFACE",
+      "properties": {
+        "name": "faq",
+        "kind": "example-binary",
+        "source_file": "examples/faq/main.go",
+        "description": "keyword lookup over faq.json",
+        "role": "FAQ bot \u2014 loads faq.json, case-insensitive keyword match",
+        "listen_addr": ":9090",
+        "handler": "substring Q\u2192A lookup; fallback lists available keys",
+        "external_input": "faq.json (cwd)"
+      },
+      "parent_id": "mod_examples",
+      "contains": [],
+      "metric_level": "DEKA_INTERFACE",
+      "dimension": "code"
+    },
+    {
+      "id": "iface_llm",
+      "type": "INTERFACE",
+      "properties": {
+        "name": "llm",
+        "kind": "example-binary",
+        "source_file": "examples/llm/main.go",
+        "description": "LLM stub (WithLLM configured, classifier unwired)",
+        "role": "LLM bot \u2014 stubbed",
+        "listen_addr": ":9090",
+        "llm_config": "anthropic / claude-haiku-4-5 / ANTHROPIC_API_KEY",
+        "status": "STUB",
+        "handler": "\"LLM integration coming soon. You asked: \" + text"
+      },
+      "parent_id": "mod_examples",
+      "contains": [],
+      "metric_level": "DEKA_INTERFACE",
+      "dimension": "code"
+    },
+    {
+      "id": "iface_graph",
+      "type": "INTERFACE",
+      "properties": {
+        "name": "graph",
+        "kind": "example-binary",
+        "source_file": "examples/graph/main.go",
+        "description": "graph-backed stub (WithTRUG loads knowledge.trug.json)",
+        "role": "Graph-backed bot \u2014 stubbed",
+        "listen_addr": ":9090",
+        "handler": "\"Graph-backed response coming soon. You asked: \" + text",
+        "external_input": "knowledge.trug.json (cwd)",
+        "status": "STUB"
+      },
+      "parent_id": "mod_examples",
+      "contains": [],
+      "metric_level": "DEKA_INTERFACE",
+      "dimension": "code"
+    }
+  ],
+  "edges": [
+    {
+      "from_id": "mod_server",
+      "to_id": "mod_noise",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/noise"
+      }
+    },
+    {
+      "from_id": "mod_server",
+      "to_id": "mod_protocol",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/protocol"
+      }
+    },
+    {
+      "from_id": "mod_client",
+      "to_id": "mod_noise",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/noise"
+      }
+    },
+    {
+      "from_id": "mod_client",
+      "to_id": "mod_protocol",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/protocol"
+      }
+    },
+    {
+      "from_id": "mod_helper",
+      "to_id": "mod_noise",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/noise"
+      }
+    },
+    {
+      "from_id": "mod_examples",
+      "to_id": "mod_server",
+      "relation": "DEPENDS_ON",
+      "properties": {
+        "import": "github.com/TRUGS-LLC/noise-chatbot/server"
+      }
+    },
+    {
+      "from_id": "fn_Server_handleMessageFull",
+      "to_id": "rec_Message",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "entry-point for every Message when no msgHandler override"
+      }
+    },
+    {
+      "from_id": "fn_Server_handleMessage",
+      "to_id": "fn_Server_handleMessageFull",
+      "relation": "IMPLEMENTS",
+      "properties": {
+        "role": "thin wrapper with questionCount=0"
+      }
+    },
+    {
+      "from_id": "fn_Server_handleMessageWithStats",
+      "to_id": "fn_Server_handleMessageFull",
+      "relation": "IMPLEMENTS",
+      "properties": {
+        "role": "thin wrapper returning extra flags"
+      }
+    },
+    {
+      "from_id": "fn_Server_serveConn",
+      "to_id": "stage_serveConn",
+      "relation": "IMPLEMENTS"
+    },
+    {
+      "from_id": "fn_Server_handleMessageFull",
+      "to_id": "stage_handleMessageFull",
+      "relation": "IMPLEMENTS"
+    },
+    {
+      "from_id": "stream_sigCh",
+      "to_id": "proc_signal_handler",
+      "relation": "FEEDS",
+      "properties": {
+        "payload": "os.Signal (SIGINT or SIGTERM)"
+      }
+    },
+    {
+      "from_id": "stream_ctx",
+      "to_id": "proc_signal_handler",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "cancellation"
+      }
+    },
+    {
+      "from_id": "stream_ctx",
+      "to_id": "proc_serveConn_worker",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "cancellation"
+      }
+    },
+    {
+      "from_id": "stream_ctx",
+      "to_id": "proc_ctx_closer",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "cancellation"
+      }
+    },
+    {
+      "from_id": "proc_accept_loop",
+      "to_id": "proc_serveConn_worker",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "spawns one PARALLEL PROCESS per accepted connection",
+        "vocab_gap": "TRL has no 'SPAWN PER' pattern \u2014 encoded as property."
+      }
+    },
+    {
+      "from_id": "fn_Server_ListenAndServe",
+      "to_id": "proc_signal_handler",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "spawns"
+      }
+    },
+    {
+      "from_id": "fn_Server_ListenAndServe",
+      "to_id": "proc_accept_loop",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "is"
+      }
+    },
+    {
+      "from_id": "fn_Server_ServeListener",
+      "to_id": "proc_ctx_closer",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "spawns"
+      }
+    },
+    {
+      "from_id": "fn_Server_ServeListener",
+      "to_id": "proc_accept_loop",
+      "relation": "FEEDS",
+      "properties": {
+        "role": "is"
+      }
+    },
+    {
+      "from_id": "proc_serveConn_worker",
+      "to_id": "stage_serveConn",
+      "relation": "ROUTES",
+      "properties": {
+        "role": "per-message dispatch"
+      }
+    },
+    {
+      "from_id": "stage_serveConn",
+      "to_id": "stage_handleMessageFull",
+      "relation": "ROUTES",
+      "properties": {
+        "role": "after validate stage, classify stage delegates to handleMessageFull"
+      }
+    },
+    {
+      "from_id": "res_DefaultGuardrails",
+      "to_id": "rec_Message",
+      "relation": "GOVERNS",
+      "properties": {
+        "role": "every CHAT Message is classified against guardrails FIRST"
+      }
+    },
+    {
+      "from_id": "rec_SafetyConfig",
+      "to_id": "stage_serveConn",
+      "relation": "GOVERNS",
+      "properties": {
+        "role": "MaxInputBytes, RateLimit, MaxInputTokens, SessionTimeout, Greeting, ConfidenceMin"
+      }
+    },
+    {
+      "from_id": "svc_Server",
+      "to_id": "rec_Message",
+      "relation": "GOVERNS",
+      "properties": {
+        "role": "Server governs every Message \u2014 ROUTE invariant"
+      }
+    },
+    {
+      "from_id": "fn_Dial",
+      "to_id": "fn_ClientHandshake",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "Dial calls ClientHandshake after TCP dial"
+      }
+    },
+    {
+      "from_id": "fn_Listener_Accept",
+      "to_id": "fn_ServerHandshake",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "Accept calls ServerHandshake after TCP accept"
+      }
+    },
+    {
+      "from_id": "fn_NoiseConn_Send",
+      "to_id": "res_CipherSuite",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "uses encrypt CipherState"
+      }
+    },
+    {
+      "from_id": "fn_NoiseConn_Receive",
+      "to_id": "res_CipherSuite",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "uses decrypt CipherState"
+      }
+    },
+    {
+      "from_id": "fn_Dial",
+      "to_id": "fn_writeFrame",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "handshake framing"
+      }
+    },
+    {
+      "from_id": "fn_Dial",
+      "to_id": "fn_readFrame",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Listener_Accept",
+      "to_id": "fn_writeFrame",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Listener_Accept",
+      "to_id": "fn_readFrame",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_GenerateKeypair",
+      "to_id": "rec_DHKey",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithResponses",
+      "to_id": "rec_ResponseNode",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithResponsesFromTRUG",
+      "to_id": "rec_ResponseNode",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithClassifier",
+      "to_id": "rec_Classifier",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithFallbackClassifier",
+      "to_id": "rec_Classifier",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_OnChat",
+      "to_id": "rec_ChatHandler",
+      "relation": "REFERENCES",
+      "properties": {
+        "deprecated_target": true
+      }
+    },
+    {
+      "from_id": "fn_Server_OnMessage",
+      "to_id": "rec_MessageHandler",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithSafety",
+      "to_id": "rec_SafetyConfig",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithLLM",
+      "to_id": "rec_LLMConfig",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_WithGuardrails",
+      "to_id": "rec_ResponseNode",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "loads JSON TRUG and appends to guardrails"
+      }
+    },
+    {
+      "from_id": "fn_New",
+      "to_id": "svc_Server",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "constructs"
+      }
+    },
+    {
+      "from_id": "fn_New",
+      "to_id": "res_DefaultGuardrails",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "loads on construction"
+      }
+    },
+    {
+      "from_id": "fn_Server_handleMessageFull",
+      "to_id": "rec_ResponseNode",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_handleMessageFull",
+      "to_id": "rec_ConnectionStats",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_handleMessageFull",
+      "to_id": "rec_Classifier",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_serveConn",
+      "to_id": "rec_SafetyConfig",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_serveConn",
+      "to_id": "rec_ConnectionStats",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Server_serveConn",
+      "to_id": "stream_ctx",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Connect",
+      "to_id": "fn_HexToKey",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Connect",
+      "to_id": "fn_GenerateKeypair",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Connect",
+      "to_id": "fn_Dial",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Client_Chat",
+      "to_id": "rec_Message",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Client_Send",
+      "to_id": "rec_Message",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Client_Send",
+      "to_id": "fn_NoiseConn_Send",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_Client_Send",
+      "to_id": "fn_NoiseConn_Receive",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "res_flag_server",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "res_flag_key",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "fn_HexToKey",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "fn_Dial",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "fn_GenerateKeypair",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "fn_helper_main",
+      "to_id": "proc_helper_reader",
+      "relation": "REFERENCES",
+      "properties": {
+        "role": "spawns reader goroutine"
+      }
+    },
+    {
+      "from_id": "fn_helper_reader",
+      "to_id": "fn_NoiseConn_Receive",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_echo",
+      "to_id": "fn_New",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_echo",
+      "to_id": "fn_Server_OnChat",
+      "relation": "REFERENCES",
+      "properties": {
+        "deprecated_target": true
+      }
+    },
+    {
+      "from_id": "iface_echo",
+      "to_id": "fn_Server_ListenAndServe",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_faq",
+      "to_id": "fn_New",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_faq",
+      "to_id": "fn_Server_OnChat",
+      "relation": "REFERENCES",
+      "properties": {
+        "deprecated_target": true
+      }
+    },
+    {
+      "from_id": "iface_faq",
+      "to_id": "fn_Server_ListenAndServe",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_llm",
+      "to_id": "fn_New",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_llm",
+      "to_id": "fn_Server_OnChat",
+      "relation": "REFERENCES",
+      "properties": {
+        "deprecated_target": true
+      }
+    },
+    {
+      "from_id": "iface_llm",
+      "to_id": "fn_Server_ListenAndServe",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_graph",
+      "to_id": "fn_New",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_graph",
+      "to_id": "fn_Server_OnChat",
+      "relation": "REFERENCES",
+      "properties": {
+        "deprecated_target": true
+      }
+    },
+    {
+      "from_id": "iface_graph",
+      "to_id": "fn_Server_ListenAndServe",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_llm",
+      "to_id": "fn_Server_WithLLM",
+      "relation": "REFERENCES"
+    },
+    {
+      "from_id": "iface_graph",
+      "to_id": "fn_Server_WithTRUG",
+      "relation": "REFERENCES"
+    }
+  ],
+  "metadata": {
+    "source_repo": "github.com/TRUGS-LLC/noise-chatbot",
+    "source_inventory": "REFERENCE/A1_inventory.md",
+    "source_trl": "REFERENCE/A2_trl_sentences.md",
+    "phase": "A3",
+    "issue": "1555",
+    "author": "Claude Opus 4.7 (1M context) + Xepayac",
+    "node_counts_by_type": {
+      "NAMESPACE": 1,
+      "MODULE": 6,
+      "RECORD": 12,
+      "RESOURCE": 4,
+      "FUNCTION": 52,
+      "SERVICE": 1,
+      "STAGE": 2,
+      "PROCESS": 6,
+      "STREAM": 2,
+      "INTERFACE": 5
+    },
+    "total_nodes": 91,
+    "total_edges": 79
+  }
+}

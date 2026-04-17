@@ -1,0 +1,53 @@
+name: question_count_format
+package: server
+function: (*Server).handleMessageFull
+description: |
+  handleMessageFull wraps the response text differently based on the
+  questionCount parameter:
+
+    questionCount == 0 → responseText returned raw.
+    questionCount >  0 → formatted as:
+        "You asked about: {user_text}\n\n{responseText}\n\n({N})"
+
+  The contactFooter (if set) is inserted after the response text and
+  BEFORE the "(N)" suffix:
+        "You asked about: {user_text}\n\n{responseText}\n\n{footer}\n\n({N})"
+
+  This fixture sends 3 CHAT messages in one session to observe all
+  three states (N=0, N=1, N=2) and asserts each formatting.
+
+  Important: questionCount increments AFTER handleMessageFull returns,
+  and only when msg.Type == "CHAT". Rejected messages (byte/token/rate
+  limit) do NOT increment. So message-index and questionCount diverge
+  once any rejection occurs.
+trl: |
+  FUNCTION handleMessageFull SHALL MAP STRING responseText AS STRING formatted
+  WHERE STRING formatted EQUALS "You asked about: {text}\\n\\n{response}\\n\\n({N})"
+  IF INTEGER questionCount EXCEEDS 0.
+harness:
+  chat_handler: echo
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "alpha"}
+      id: msg-q-1
+    expect:
+      type: CHAT
+      payload_text_exact: "You said: alpha"
+      reply_to: msg-q-1
+  - send:
+      type: CHAT
+      payload: {text: "beta"}
+      id: msg-q-2
+    expect:
+      type: CHAT
+      payload_text_exact: "You asked about: beta\n\nYou said: beta\n\n(1)"
+      reply_to: msg-q-2
+  - send:
+      type: CHAT
+      payload: {text: "gamma"}
+      id: msg-q-3
+    expect:
+      type: CHAT
+      payload_text_exact: "You asked about: gamma\n\nYou said: gamma\n\n(2)"
+      reply_to: msg-q-3

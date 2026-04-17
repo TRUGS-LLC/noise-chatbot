@@ -1,0 +1,32 @@
+name: template_multi_match
+package: server
+function: (*Server).handleMessageFull
+description: |
+  When multiple ResponseNodes match the user text, their Response strings
+  are concatenated in descending-score order joined by two newlines
+  ("\n\n"). Score = number of keywords present in the user text
+  (case-insensitive substring match via defaultClassifier).
+
+  Here two nodes each match one keyword — the joined result has the
+  hours response first and the location response second (default stable
+  iteration over the responses slice when scores tie).
+trl: |
+  SERVICE Server SHALL AGGREGATE STRING response FROM EACH RECORD ResponseNode
+  WHERE RECORD ResponseNode REFERENCES ARRAY ids BY FUNCTION join_with_double_newline.
+harness:
+  responses:
+    - id: node_hours
+      keywords: ["hours"]
+      response: "We are open 9am to 5pm."
+    - id: node_location
+      keywords: ["location"]
+      response: "We are at 123 Main Street."
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "tell me your hours and location"}
+      id: msg-multi-1
+    expect:
+      type: CHAT
+      payload_text_exact: "We are open 9am to 5pm.\n\nWe are at 123 Main Street."
+      reply_to: msg-multi-1

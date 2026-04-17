@@ -1,0 +1,22 @@
+name: reply_to_roundtrip
+package: protocol
+function: Message
+description: |
+  The server's response to a CHAT message sets ReplyTo to the exact
+  request ID string (including unusual characters / long values). The
+  response's own ID is a fresh UUID distinct from the request ID. This
+  exercises the protocol.Message JSON round-trip + the ID plumbing in
+  handleMessageFull.
+trl: |
+  EACH RECORD Message FROM SERVICE Server SHALL CONTAIN STRING reply_to EQUALS STRING request.id.
+harness:
+  chat_handler: echo
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "ping"}
+      id: "urn:uuid:12345678-abcd-ef00-1234-567890abcdef"
+    expect:
+      type: CHAT
+      payload_text_exact: "You said: ping"
+      reply_to: "urn:uuid:12345678-abcd-ef00-1234-567890abcdef"

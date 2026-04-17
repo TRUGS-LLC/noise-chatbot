@@ -1,0 +1,25 @@
+name: contact_footer
+package: server
+function: (*Server).WithContactFooter
+description: |
+  When contactFooter is non-empty, every response text has
+  "\n\n" + footer appended after the primary response text (and before
+  the question-count suffix added separately after 20 questions).
+
+  This fixture asserts the exact footer formatting with a simple echo
+  handler so only the appended text differs from the input.
+trl: |
+  SERVICE Server SHALL AUGMENT STRING responseText BY STRING contactFooter
+  WHERE STRING format EQUALS "{responseText}\\n\\n{contactFooter}".
+harness:
+  chat_handler: echo
+  contact_footer: "Contact: hello@example.com"
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "hi"}
+      id: msg-footer-1
+    expect:
+      type: CHAT
+      payload_text_exact: "You said: hi\n\nContact: hello@example.com"
+      reply_to: msg-footer-1
