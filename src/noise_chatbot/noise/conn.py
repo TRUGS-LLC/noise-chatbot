@@ -110,20 +110,18 @@ class NoiseConn:
             if length > DATA_FRAME_MAX_BYTES:
                 # Close-on-oversize — matches Go behaviour (prevents resource
                 # exhaustion from a malformed or malicious peer).
-                try:
+                with contextlib.suppress(OSError):
                     self._conn.close()
-                finally:
-                    raise ValueError(f"noise recv: message too large ({length} bytes)")
+                raise ValueError(f"noise recv: message too large ({length} bytes)")
             ciphertext = _recv_exact(self._conn, length)
             try:
                 plaintext: bytes = self._noise.decrypt(ciphertext)
             except Exception as exc:
                 # Decrypt failure means the session is compromised or the peer
                 # sent garbage. Close the connection to prevent further use.
-                try:
+                with contextlib.suppress(OSError):
                     self._conn.close()
-                finally:
-                    raise RuntimeError(f"noise decrypt: {exc}") from exc
+                raise RuntimeError(f"noise decrypt: {exc}") from exc
             return plaintext
 
     def close(self) -> None:
