@@ -1,0 +1,33 @@
+name: honeypot_tier_escalation
+package: server
+function: (*Server).serveConn
+description: |
+  On repeated guardrail-triggering questions in one session, serveConn
+  escalates response latency and response-text pool in tiers:
+
+    tier 2 (3-4 hits):  3s delay, 3-message canned pool
+    tier 3 (5-7 hits):  8s delay, 3-message canned pool
+    tier 4 (8-11 hits): 15s delay, 4-message canned pool
+    tier 5 (12+ hits):  farewell + permanent ban
+
+  Exercising this requires 12 consecutive guardrail hits. Cumulative
+  delays through tier 5:
+
+    2 × 0s (tiers 0-1)
+   + 2 × 3s (tier 2: hits 3 and 4)
+   + 3 × 8s (tier 3: hits 5, 6, 7)
+   + 4 × 15s (tier 4: hits 8, 9, 10, 11)
+   + 1 × 15s + farewell (tier 5: hit 12)
+   = 0 + 6 + 24 + 60 + 15 = 105 seconds minimum.
+
+  Plus 12 Noise round-trips. Feasible but slow for routine parity.
+trl: |
+  SERVICE Server SHALL TIMEOUT WITHIN 15 IF INTEGER guardrailHits EXCEEDS 7.
+  SERVICE Server SHALL SEND RECORD Message 'with STRING farewell AND WRITE OBJECT bannedKeys
+  IF INTEGER guardrailHits EXCEEDS 11.
+skip: true
+skip_reason: |
+  DEFERRED — needs ~105 seconds of accumulated tier delays to walk the
+  full escalation. Same mitigation options as fixture 19. For v1 the
+  tier-2 boundary only could be exercised (3s delay, hits 3-4) in
+  about 5 seconds. Adding that as a separate fixture is a follow-up.

@@ -1,0 +1,30 @@
+name: template_no_match
+package: server
+function: (*Server).WithNoMatch
+description: |
+  When no ResponseNode keywords match the user text (and no fallback
+  classifier is installed), the server returns the `noMatchText` string
+  instead. Default value is "I don't have information about that. Please
+  contact us directly." — but custom text is configurable via
+  (*Server).WithNoMatch.
+
+  Note: this fixture deliberately phrases the question with words that
+  don't overlap the default 15 guardrails OR any installed responses.
+trl: |
+  SERVICE Server SHALL RESPOND STRING noMatchText IF ARRAY guardrail_ids EQUALS NONE
+  AND ARRAY response_ids EQUALS NONE AND FUNCTION fallbackClassifier EQUALS NONE.
+harness:
+  no_match_text: "No match. Ask about our products."
+  responses:
+    - id: node_products
+      keywords: ["product", "catalog"]
+      response: "We sell widgets."
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "completely unrelated phrase about xylophone volcano"}
+      id: msg-nomatch-1
+    expect:
+      type: CHAT
+      payload_text_exact: "No match. Ask about our products."
+      reply_to: msg-nomatch-1

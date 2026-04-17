@@ -1,0 +1,23 @@
+name: echo_basic
+package: server
+function: (*Server).OnChat
+description: |
+  Legacy OnChat handler (DEPRECATED free-text mode) returns the string
+  "You said: " concatenated with the received text verbatim. The server
+  wraps the response in a CHAT Message with a fresh UUID and ReplyTo set
+  to the request's ID.
+trl: |
+  SERVICE Server SHALL RECEIVE RECORD Message 'with STRING "hello" FROM PARTY client
+  THEN DEFINE RECORD Message 'with STRING "You said: hello" AS payload.text
+  THEN SEND RESULT TO PARTY client.
+harness:
+  chat_handler: echo
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "hello"}
+      id: msg-echo-1
+    expect:
+      type: CHAT
+      payload_text_exact: "You said: hello"
+      reply_to: msg-echo-1

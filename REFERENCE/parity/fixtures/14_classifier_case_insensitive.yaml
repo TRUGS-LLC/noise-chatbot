@@ -1,0 +1,26 @@
+name: classifier_case_insensitive
+package: server
+function: defaultClassifier
+description: |
+  defaultClassifier lowercases the user text once and lowercases each
+  keyword before substring comparison. Therefore "HOURS" in the user
+  text matches a keyword of "hours", and "Monday-Friday" in the user
+  text matches a keyword of "monday".
+trl: |
+  FUNCTION defaultClassifier SHALL MAP STRING userText AS STRING lower
+  THEN FILTER ARRAY keywords BY STRING keyword_lower CONTAINS STRING lower.
+harness:
+  responses:
+    - id: node_hours
+      keywords: ["hours"]
+      response: "9am-5pm."
+interactions:
+  # Avoid "WHAT ARE YOU" (guard-identity keyword after lowercase).
+  - send:
+      type: CHAT
+      payload: {text: "STORE HOURS?"}
+      id: msg-case-1
+    expect:
+      type: CHAT
+      payload_text_exact: "9am-5pm."
+      reply_to: msg-case-1

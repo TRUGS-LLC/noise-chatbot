@@ -1,0 +1,20 @@
+name: greeting_first_message
+package: server
+function: (*Server).WithGreeting
+description: |
+  When safety.Greeting is non-empty, serveConn pushes a CHAT Message
+  containing the greeting text to the client immediately after the
+  Noise handshake completes — before the server reads any message from
+  the client. The greeting carries a fresh UUID and no ReplyTo field
+  (it is unsolicited).
+trl: |
+  SERVICE Server SHALL SEND RECORD Message 'with STRING greeting TO PARTY client
+  BEFORE SERVICE Server SHALL RECEIVE ANY RECORD Message.
+harness:
+  chat_handler: echo
+  greeting: "Hello from Noise Chatbot!"
+interactions:
+  - expect_only: true
+    expect:
+      type: CHAT
+      payload_text_exact: "Hello from Noise Chatbot!"
