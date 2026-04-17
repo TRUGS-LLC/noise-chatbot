@@ -28,6 +28,9 @@ classifiers = [
 dependencies = [
     # Noise Protocol Framework in Python
     "noiseprotocol>=0.3.1",
+    # X25519 keygen (noiseprotocol accepts raw 32-byte keys; cryptography
+    # generates them and derives public keys).
+    "cryptography>=41",
     # Graph storage backend for TRUG-shaped state (banned keys, response nodes, guardrails)
     "trugs-store>=0.1.0",
 ]
@@ -98,6 +101,21 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "trugs_store.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "noise.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "yaml.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# tests/parity runner is a subprocess-driven test harness — the dict payloads
+# shuttled through JSON don't benefit from strict typing.
+module = "tests.parity.runner"
+disallow_untyped_defs = false
+check_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"

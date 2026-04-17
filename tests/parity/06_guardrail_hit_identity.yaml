@@ -1,0 +1,25 @@
+name: guardrail_hit_identity
+package: server
+function: DefaultGuardrails
+description: |
+  The 15 DefaultGuardrails are loaded automatically on server.New. A
+  CHAT message containing any guardrail keyword is classified against
+  guardrails BEFORE the business response list, and the first matching
+  guardrail's Response text is returned verbatim. Here "who are you"
+  triggers the guard-identity node.
+
+  The guardrail response is exact — any drift in the compiled-in text
+  would be caught here.
+trl: |
+  SERVICE Server SHALL MAP STRING userText BY FUNCTION defaultClassifier AGAINST RESOURCE DefaultGuardrails AS ARRAY guardIds.
+  SERVICE Server SHALL RESPOND STRING response FROM RECORD guardrail WHERE RECORD guardrail REFERENCES ARRAY guardIds FIRST.
+harness: {}
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "who are you exactly?"}
+      id: msg-guard-1
+    expect:
+      type: CHAT
+      payload_text_exact: "I'm an automated assistant for this service. I answer questions from our knowledge base. I don't have personal opinions or experiences — I find the best answer from what we've published."
+      reply_to: msg-guard-1

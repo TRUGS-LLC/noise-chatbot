@@ -1,0 +1,42 @@
+name: custom_guardrail_appended
+package: server
+function: (*Server).WithGuardrails
+description: |
+  WithGuardrails reads a .trug.json file and APPENDS (not replaces) the
+  loaded guardrail nodes to the existing guardrails list (which starts
+  as a copy of DefaultGuardrails). A subsequent CHAT message matching
+  the custom guardrail's keywords returns its response verbatim.
+
+  This fixture demonstrates the additive behaviour: the default
+  identity guardrail is still intact, AND the custom business-hours
+  guardrail resolves correctly.
+trl: |
+  FUNCTION WithGuardrails SHALL AUGMENT ARRAY guardrails ON SELF BY ARRAY loaded_nodes.
+harness:
+  extra_guardrails:
+    - id: custom_g_hours
+      keywords: ["business hours", "when open"]
+      response: "Our business hours are 9-5 weekdays."
+interactions:
+  # First CHAT (questionCount=0 → no formatting wrap):
+  # "when open" hits the custom guardrail's keyword list. "when open"
+  # does NOT overlap any DefaultGuardrail keyword, so the custom one wins
+  # on score 1 vs default 0.
+  - send:
+      type: CHAT
+      payload: {text: "when open?"}
+      id: msg-cg-1
+    expect:
+      type: CHAT
+      payload_text_exact: "Our business hours are 9-5 weekdays."
+      reply_to: msg-cg-1
+  # Second CHAT (questionCount=1 → "You asked about: ... \n\n(1)" wrap).
+  # "who are you?" hits guard-identity in DefaultGuardrails.
+  - send:
+      type: CHAT
+      payload: {text: "who are you?"}
+      id: msg-cg-2
+    expect:
+      type: CHAT
+      payload_text_exact: "You asked about: who are you?\n\nI'm an automated assistant for this service. I answer questions from our knowledge base. I don't have personal opinions or experiences — I find the best answer from what we've published.\n\n(1)"
+      reply_to: msg-cg-2

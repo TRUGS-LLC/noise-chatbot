@@ -1,0 +1,36 @@
+name: template_match_cap_3
+package: server
+function: (*Server).handleMessageFull
+description: |
+  When more than 3 ResponseNodes would match, the server caps the
+  concatenated result at 3 (hard-coded, no builder exposes this).
+  Remaining matches are dropped. This prevents a single query from
+  dumping the entire knowledge base.
+
+  Here 4 nodes each match one unique keyword; the response contains
+  exactly 3 segments separated by "\n\n".
+trl: |
+  SERVICE Server SHALL TAKE 3 FROM ARRAY ids THEN AGGREGATE STRING response BY join_with_double_newline.
+harness:
+  responses:
+    - id: n1
+      keywords: ["alpha"]
+      response: "FIRST"
+    - id: n2
+      keywords: ["beta"]
+      response: "SECOND"
+    - id: n3
+      keywords: ["gamma"]
+      response: "THIRD"
+    - id: n4
+      keywords: ["delta"]
+      response: "FOURTH"
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "alpha beta gamma delta"}
+      id: msg-cap-1
+    expect:
+      type: CHAT
+      payload_text_exact: "FIRST\n\nSECOND\n\nTHIRD"
+      reply_to: msg-cap-1

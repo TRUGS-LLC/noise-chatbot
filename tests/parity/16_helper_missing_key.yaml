@@ -1,0 +1,24 @@
+name: helper_missing_key
+package: helper
+function: helper/main
+description: |
+  The noise-helper binary requires --key. Running without it prints
+  "ERROR: --key required" to stderr and exits with code 1. This is a
+  process-level contract — the helper does not connect anywhere.
+trl: |
+  PROCESS helper SHALL REJECT ENTRY IF STRING flag_key EQUALS NONE
+  THEN WRITE STRING "ERROR: --key required" TO EXIT stderr
+  THEN EXIT WITH INTEGER 1.
+skip: true
+skip_reason: |
+  Exercised outside the harness framework (no server or session). The
+  runner's execution model is harness + helper against a server, not
+  helper-alone. Test executed separately:
+
+    $ /tmp/noise-helper
+    ERROR: --key required
+    $ echo $?
+    1
+
+  Verified manually 2026-04-17; automated execution deferred to a
+  separate helper-process fixture runner in Phase C.

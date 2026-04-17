@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+
 
 @dataclass(frozen=True, slots=True)
 class DHKey:
@@ -19,9 +22,10 @@ class DHKey:
     DEFINE RECORD DHKey CONTAINS STRING public AND STRING private.
     </trl>
 
-    Notes:
-        Equivalent to Go ``noise.DHKey`` (a type alias for
-        ``flynn/noise.DHKey``). Fields are raw 32-byte values.
+    Fields are raw 32-byte values (not PEM/DER).
+
+    Go parity:
+        ``noise.DHKey`` — alias for ``flynn/noise.DHKey``.
     """
 
     public: bytes
@@ -36,11 +40,19 @@ def generate_keypair() -> DHKey:
         THEN DEFINE A RECORD DHKey THEN RETURNS_TO SOURCE.
     </trl>
 
-    Go parity:
-        ``noise.GenerateKeypair()`` — ``crypto/rand.Reader`` via
-        ``CipherSuite.GenerateKeypair``.
+    Go parity: ``noise.GenerateKeypair`` — ``crypto/rand.Reader``.
     """
-    raise NotImplementedError("Phase C")
+    priv = X25519PrivateKey.generate()
+    private_bytes = priv.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    public_bytes = priv.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    return DHKey(public=public_bytes, private=private_bytes)
 
 
 def key_to_hex(key: bytes) -> str:
@@ -50,14 +62,13 @@ def key_to_hex(key: bytes) -> str:
     FUNCTION key_to_hex SHALL MAP DATA key AS STRING hex THEN RETURNS_TO SOURCE.
     </trl>
 
-    Go parity:
-        ``noise.KeyToHex`` — ``hex.EncodeToString``.
+    Go parity: ``noise.KeyToHex`` — ``hex.EncodeToString``.
     """
-    raise NotImplementedError("Phase C")
+    return key.hex()
 
 
 def hex_to_key(s: str) -> bytes:
-    """Decode a hex string to a 32-byte key; reject invalid hex or wrong length.
+    """Decode a hex string to a 32-byte key.
 
     <trl>
     FUNCTION hex_to_key SHALL VALIDATE STRING s
@@ -72,4 +83,10 @@ def hex_to_key(s: str) -> bytes:
         ``noise.HexToKey`` — errors ``"invalid hex key: %w"`` and
         ``"key must be 32 bytes, got %d"``.
     """
-    raise NotImplementedError("Phase C")
+    try:
+        b = bytes.fromhex(s)
+    except ValueError as exc:
+        raise ValueError(f"invalid hex key: {exc}") from exc
+    if len(b) != 32:
+        raise ValueError(f"key must be 32 bytes, got {len(b)}")
+    return b

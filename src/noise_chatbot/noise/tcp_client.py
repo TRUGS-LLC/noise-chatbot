@@ -14,9 +14,17 @@ from __future__ import annotations
 import socket
 from typing import TYPE_CHECKING
 
+from noise.connection import Keypair, NoiseConnection
+
+from noise_chatbot.noise.conn import NoiseConn
+from noise_chatbot.noise.frame import read_frame, write_frame
+
 if TYPE_CHECKING:
-    from noise_chatbot.noise.conn import NoiseConn
     from noise_chatbot.noise.keys import DHKey
+
+# Fixed cipher suite — Curve25519 + ChaCha20-Poly1305 + BLAKE2b. Matches
+# Go's ``noise.CipherSuite`` (no negotiation).
+_NOISE_PROTOCOL_NAME: bytes = b"Noise_IK_25519_ChaChaPoly_BLAKE2b"
 
 
 def dial(addr: str, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
@@ -45,7 +53,13 @@ def dial(addr: str, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
     Go parity:
         ``noise.Dial`` — net.Dial + ClientHandshake.
     """
-    raise NotImplementedError("Phase C")
+    host, port_str = addr.rsplit(":", 1)
+    sock = socket.create_connection((host, int(port_str)))
+    try:
+        return client_handshake(sock, client_key, server_pub_key)
+    except Exception:
+        sock.close()
+        raise
 
 
 def client_handshake(conn: socket.socket, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
@@ -61,7 +75,23 @@ def client_handshake(conn: socket.socket, client_key: DHKey, server_pub_key: byt
 
     Handshake pattern ``-> e, es, s, ss / <- e, ee, se`` (1-RTT, 2 frames).
 
-    Go parity:
-        ``noise.ClientHandshake``.
+    Go parity: ``noise.ClientHandshake``.
     """
-    raise NotImplementedError("Phase C")
+    nc = NoiseConnection.from_name(_NOISE_PROTOCOL_NAME)
+    nc.set_as_initiator()
+    nc.set_keypair_from_private_bytes(Keypair.STATIC, client_key.private)
+    nc.set_keypair_from_public_bytes(Keypair.REMOTE_STATIC, server_pub_key)
+    nc.start_handshake()
+
+    # msg1: -> e, es, s, ss
+    msg1 = nc.write_message()
+    write_frame(conn, bytes(msg1))
+
+    # msg2: <- e, ee, se
+    msg2 = read_frame(conn)
+    nc.read_message(msg2)
+
+    if not nc.handshake_finished:
+        raise RuntimeError("handshake did not finish after 1-RTT")
+
+    return NoiseConn(conn=conn, noise_connection=nc, remote=server_pub_key)

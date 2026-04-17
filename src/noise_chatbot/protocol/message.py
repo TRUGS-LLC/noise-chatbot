@@ -8,6 +8,7 @@ DEFINE RECORD Message CONTAINS STRING type AND DATA payload
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -50,7 +51,14 @@ class Message:
 
         Go parity: ``json.Marshal(protocol.Message)`` — ``omitempty`` on ``ReplyTo``.
         """
-        raise NotImplementedError("Phase C")
+        doc: dict[str, Any] = {
+            "type": self.type,
+            "payload": self.payload,
+            "id": self.id,
+        }
+        if self.reply_to:
+            doc["reply_to"] = self.reply_to
+        return json.dumps(doc)
 
     @classmethod
     def from_json(cls, data: bytes | str) -> Message:
@@ -63,4 +71,12 @@ class Message:
 
         Go parity: ``json.Unmarshal(data, &msg)``.
         """
-        raise NotImplementedError("Phase C")
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        doc = json.loads(data)
+        return cls(
+            type=doc.get("type", ""),
+            payload=doc.get("payload", {}),
+            id=doc.get("id", ""),
+            reply_to=doc.get("reply_to", ""),
+        )

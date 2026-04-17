@@ -8,19 +8,21 @@ RECORD Client CONTAINS RECORD conn.
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
+
+from noise_chatbot.noise.keys import generate_keypair, hex_to_key
+from noise_chatbot.noise.tcp_client import dial
+from noise_chatbot.protocol.message import Message
 
 if TYPE_CHECKING:
     from noise_chatbot.noise.conn import NoiseConn
-    from noise_chatbot.protocol.message import Message
 
 
 class Client:
     """An encrypted chatbot client — thin wrapper over a NoiseConn.
 
     <trl>DEFINE RECORD Client CONTAINS RECORD conn.</trl>
-
-    Go parity: ``client.Client``.
     """
 
     __slots__ = ("_conn",)
@@ -39,10 +41,15 @@ class Client:
         </trl>
 
         Message ID format: ``"msg-<unix-nano>"`` (Go parity).
-
-        Go parity: ``(*Client).Chat``.
         """
-        raise NotImplementedError("Phase C")
+        msg = Message(
+            type="CHAT",
+            payload={"text": text},
+            id=f"msg-{time.time_ns()}",
+        )
+        resp = self.send(msg)
+        text_out: str = resp.payload.get("text", "") if isinstance(resp.payload, dict) else ""
+        return text_out
 
     def send(self, msg: Message) -> Message:
         """Marshal + send + receive + unmarshal a full Message.
@@ -53,17 +60,17 @@ class Client:
             THEN RECEIVE STRING json FROM RECORD conn
             THEN MAP STRING json AS RECORD Message THEN RETURNS_TO SOURCE.
         </trl>
-
-        Go parity: ``(*Client).Send``.
         """
-        raise NotImplementedError("Phase C")
+        self._conn.send(msg.to_json().encode("utf-8"))
+        raw = self._conn.receive()
+        return Message.from_json(raw)
 
     def close(self) -> None:
         """Close the underlying Noise connection.
 
         <trl>FUNCTION Client.close SHALL REVOKE RECORD conn.</trl>
         """
-        raise NotImplementedError("Phase C")
+        self._conn.close()
 
 
 def connect(addr: str, server_public_key_hex: str) -> Client:
@@ -76,16 +83,8 @@ def connect(addr: str, server_public_key_hex: str) -> Client:
         SUBJECT_TO STRING server_pub BY FUNCTION dial
         THEN RETURNS_TO SOURCE RECORD Client.
     </trl>
-
-    Args:
-        addr: ``"host:port"``.
-        server_public_key_hex: Server's Curve25519 static public key, hex.
-
-    Raises:
-        ValueError: If the hex key is malformed or the wrong length.
-        OSError: TCP dial failure.
-        RuntimeError: Handshake failure.
-
-    Go parity: ``client.Connect``.
     """
-    raise NotImplementedError("Phase C")
+    server_pub = hex_to_key(server_public_key_hex)
+    client_key = generate_keypair()
+    conn = dial(addr, client_key, server_pub)
+    return Client(conn=conn)

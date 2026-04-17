@@ -1,0 +1,45 @@
+name: template_overrides_onchat
+package: server
+function: (*Server).handleMessageFull
+description: |
+  When both WithResponses (template mode) and OnChat (legacy free-text
+  mode) are installed, the template path wins — provided a response
+  matches. If no guardrail and no response matches, the chatHandler is
+  NOT invoked; instead noMatchText is returned. This is a behaviour
+  guarantee of the "LLM never composes" invariant.
+
+  Scenario A: keyword hits a response → response text, NOT echo.
+  Scenario B: no keyword hit → noMatchText, NOT echo.
+trl: |
+  SERVICE Server SHALL_NOT INVOKE FUNCTION chatHandler IF ARRAY responses EXISTS.
+harness:
+  chat_handler: echo
+  no_match_text: "Please ask about widgets."
+  responses:
+    - id: node_widget
+      keywords: ["widget"]
+      response: "Widgets are $10 each."
+interactions:
+  # First CHAT → handleMessageFull(msg, 0) — raw response, no formatting.
+  # (Note: avoids the guard-identity keyword "your" by using "widget".
+  #  "tell me about widget" has no guardrail overlap.)
+  - send:
+      type: CHAT
+      payload: {text: "tell me about widget"}
+      id: msg-ov-1
+    expect:
+      type: CHAT
+      payload_text_exact: "Widgets are $10 each."
+      reply_to: msg-ov-1
+  # Second CHAT → handleMessageFull(msg, 1) — questionCount prefix +
+  # suffix applied: "You asked about: {text}\n\n{response}\n\n({N})".
+  # This formatting is a property of handleMessageFull, not the
+  # override path under test here, but it's observable and must match.
+  - send:
+      type: CHAT
+      payload: {text: "xyz unrelated"}
+      id: msg-ov-2
+    expect:
+      type: CHAT
+      payload_text_exact: "You asked about: xyz unrelated\n\nPlease ask about widgets.\n\n(1)"
+      reply_to: msg-ov-2

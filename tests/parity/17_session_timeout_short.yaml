@@ -1,0 +1,38 @@
+name: session_timeout_short
+package: server
+function: (*Server).WithSafety (SessionTimeout)
+description: |
+  When safety.SessionTimeout elapses after the LastMessageAt timestamp
+  (and LastMessageAt is non-zero — i.e. at least one message has been
+  received), the serveConn loop returns, which closes the connection.
+
+  From the client side (the noise-helper bridge), this manifests as
+  Receive returning an error, which causes the helper to print
+  "ERROR: recv: ..." to stderr and os.Exit(0).
+
+  This fixture sets timeout = 1 second, sends one message, waits 2
+  seconds, then sends a second message and asserts NO response comes
+  back within 3 seconds (the connection is dead).
+trl: |
+  SERVICE Server SHALL TIMEOUT WITHIN INTEGER SessionTimeout IF DATA LastMessageAt EXISTS
+  THEN REVOKE RESOURCE conn.
+harness:
+  chat_handler: echo
+  session_timeout_seconds: 1
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "first"}
+      id: msg-st-1
+    expect:
+      type: CHAT
+      payload_text_exact: "You said: first"
+      reply_to: msg-st-1
+  - delay_seconds: 2
+  - send:
+      type: CHAT
+      payload: {text: "second, after timeout"}
+      id: msg-st-2
+    expect:
+      expect_no_response: true
+      timeout_seconds: 2

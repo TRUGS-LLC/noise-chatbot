@@ -9,6 +9,19 @@ EACH RECORD frame SHALL CONTAIN INTEGER length AND DATA payload.
 from __future__ import annotations
 
 import socket
+import struct
+
+
+def _recv_exact(conn: socket.socket, n: int) -> bytes:
+    """Read exactly ``n`` bytes from ``conn`` or raise ``ConnectionError``."""
+    buf = bytearray()
+    while len(buf) < n:
+        chunk = conn.recv(n - len(buf))
+        if not chunk:
+            raise ConnectionError("short read: peer closed")
+        buf.extend(chunk)
+    return bytes(buf)
+
 
 # <trl>DEFINE INTEGER handshake_frame_max_bytes AS 65536.</trl>
 HANDSHAKE_FRAME_MAX_BYTES: int = 65_536
@@ -24,7 +37,7 @@ def write_frame(conn: socket.socket, data: bytes) -> None:
     Go parity:
         ``noise/frame.go:writeFrame`` — ``binary.BigEndian`` uint32 prefix.
     """
-    raise NotImplementedError("Phase C")
+    conn.sendall(struct.pack(">I", len(data)) + data)
 
 
 def read_frame(conn: socket.socket) -> bytes:
@@ -43,4 +56,7 @@ def read_frame(conn: socket.socket) -> bytes:
     Go parity:
         ``noise/frame.go:readFrame`` — cap at 65 536.
     """
-    raise NotImplementedError("Phase C")
+    (length,) = struct.unpack(">I", _recv_exact(conn, 4))
+    if length > HANDSHAKE_FRAME_MAX_BYTES:
+        raise ValueError(f"frame too large: {length} bytes")
+    return _recv_exact(conn, length)

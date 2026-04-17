@@ -44,4 +44,14 @@ def default_classifier(user_text: str, nodes: list[ResponseNode]) -> list[str]:
 
     Go parity: ``server.go:defaultClassifier``.
     """
-    raise NotImplementedError("Phase C")
+    lower = user_text.lower()
+    scored: list[tuple[int, int, str]] = []
+    for index, node in enumerate(nodes):
+        score = sum(1 for kw in node.keywords if kw.lower() in lower)
+        if score > 0:
+            # Second element is input index for stable ordering on ties.
+            scored.append((score, index, node.id))
+    if not scored:
+        return []
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    return [node_id for _, _, node_id in scored]

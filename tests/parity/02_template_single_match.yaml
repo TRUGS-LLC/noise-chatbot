@@ -1,0 +1,31 @@
+name: template_single_match
+package: server
+function: (*Server).WithResponses + defaultClassifier
+description: |
+  When a single ResponseNode's keywords are present in the user text, the
+  server returns that node's Response text verbatim. No LLM generation —
+  every word comes from a human-authored ResponseNode.
+trl: |
+  SERVICE Server SHALL MAP STRING userText BY FUNCTION defaultClassifier AGAINST ARRAY responses AS ARRAY ids.
+  SERVICE Server SHALL WRITE STRING response FROM RECORD ResponseNode WHERE RECORD ResponseNode REFERENCES ARRAY ids FIRST.
+harness:
+  responses:
+    - id: node_hours
+      keywords: ["hours", "open"]
+      response: "We are open 9am to 5pm, Monday through Friday."
+    - id: node_location
+      keywords: ["where", "location", "address"]
+      response: "We are located at 123 Main Street."
+interactions:
+  # NOTE: the user text carefully avoids every DefaultGuardrail keyword.
+  # "what are your hours" contains "what are you" (substring), which is a
+  # guard-identity keyword — that fires first and masks the business
+  # response. "store hours?" has no guardrail overlap.
+  - send:
+      type: CHAT
+      payload: {text: "store hours?"}
+      id: msg-tpl-1
+    expect:
+      type: CHAT
+      payload_text_exact: "We are open 9am to 5pm, Monday through Friday."
+      reply_to: msg-tpl-1

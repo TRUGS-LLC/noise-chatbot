@@ -1,0 +1,24 @@
+name: input_byte_limit
+package: server
+function: (*Server).WithSafety (MaxInputBytes)
+description: |
+  When incoming decrypted message length exceeds safety.MaxInputBytes,
+  serveConn replies with an ERROR-typed Message whose payload is
+  {"error": "message too large"} and a fresh UUID id. The loop then
+  continues — no disconnect.
+
+  Here we cap at 32 bytes then send 100 bytes of text.
+trl: |
+  SERVICE Server SHALL REJECT DATA IF INTEGER length EXCEEDS INTEGER MaxInputBytes
+  THEN SEND RECORD Message 'with STRING "message too large" AS payload.error.
+harness:
+  chat_handler: echo
+  max_input_bytes: 32
+interactions:
+  - send:
+      type: CHAT
+      payload: {text: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+      id: msg-oversize-1
+    expect:
+      type: ERROR
+      error_payload: "message too large"

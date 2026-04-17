@@ -1,0 +1,40 @@
+name: wind_down_40_ban
+package: server
+function: (*Server).serveConn
+description: |
+  After 40 CHAT messages in a single session, serveConn sends a
+  farewell message, records a 3-day temporary ban in bannedKeys keyed
+  by the client's Noise public key hex, logs the event, and returns
+  (closing the connection). Subsequent connections from the same
+  static keypair are rejected (silent close) for 72 hours.
+
+  Exercising this requires sending 40 CHAT messages and, crucially,
+  waiting through the wind-down sleep schedule:
+
+      sleep = (questionCount - 20) * 5 seconds per message, starting
+      at question 21.
+
+  Total wall-clock sleep across questions 21..40:
+    sum(k=1..20) k*5s = 5 * 210 = 1050 seconds ≈ 17.5 minutes.
+
+  This is too slow for routine parity runs. The Go test suite's
+  TestWindDown40Goodbye skips the delays by mocking time.Sleep or by
+  running with shorter increments.
+trl: |
+  SERVICE Server SHALL SEND RECORD Message 'with STRING farewell TO PARTY client
+  THEN WRITE STRING keyHex AND DATA now TO OBJECT bannedKeys
+  THEN REVOKE RESOURCE conn
+  IF INTEGER questionCount EXCEEDS 39.
+skip: true
+skip_reason: |
+  DEFERRED — ~17.5 minutes of wall-clock sleep required to reach
+  questionCount = 40 with the production delay schedule. Implementation
+  options (all deferred):
+    1. Add a harness flag to disable wind-down sleeps for testing.
+    2. Add a test-only monkey-patch seam (e.g. sleepFn package variable)
+       and set it to a no-op in the harness.
+    3. Run the fixture async/background and tolerate the latency on a
+       nightly parity run.
+  For v1 we assert only the immediate wind-down branches (20-question
+  summary; the 40-question ban is visible via the farewell text and
+  ban map — but triggering it is infeasible at normal speeds).

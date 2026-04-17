@@ -1,0 +1,23 @@
+name: non_chat_echoes
+package: server
+function: (*Server).handleMessageFull
+description: |
+  When msgHandler is not installed and the received Message has a Type
+  other than "CHAT", handleMessageFull echoes the message back — same
+  Type, same Payload (byte-for-byte), new UUID id, ReplyTo set to the
+  request ID. This is the default fall-through for unknown types.
+trl: |
+  SERVICE Server SHALL DEFINE RECORD Message CONTAINS STRING type AND DATA payload
+  AND STRING new_id AND STRING msg.id AS reply_to THEN SEND RESULT
+  FOR ANY STRING type NOT EQUALS "CHAT".
+harness:
+  chat_handler: echo
+interactions:
+  - send:
+      type: CUSTOM_PING
+      payload: {foo: "bar", n: 42}
+      id: msg-ping-1
+    expect:
+      type: CUSTOM_PING
+      reply_to: msg-ping-1
+      payload_equals: {foo: "bar", n: 42}
