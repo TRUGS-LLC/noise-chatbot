@@ -1,0 +1,194 @@
+{
+  "name": "NOISE_CHATBOT_PYTHON Folder",
+  "version": "0.1.0.dev0",
+  "type": "PROJECT",
+  "description": "Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b). Python reimplementation of TRUGS-LLC/noise-chatbot (Go), regenerated from noise_chatbot.super.trug.json per the TRUG-driven rewrite methodology. Phase B scaffold — stubs raise NotImplementedError; Phase C fills them.",
+  "dimensions": {
+    "folder_structure": {
+      "description": "NOISE_CHATBOT_PYTHON components and structure",
+      "base_level": "BASE"
+    }
+  },
+  "capabilities": {
+    "extensions": [],
+    "vocabularies": [
+      "project_v1"
+    ],
+    "profiles": []
+  },
+  "nodes": [
+    {
+      "id": "noise_chatbot_python_folder",
+      "type": "FOLDER",
+      "properties": {
+        "name": "NOISE_CHATBOT_PYTHON",
+        "purpose": "Python reimplementation of noise-chatbot (Go). Scaffold under Phase B; implementation under Phase C.",
+        "version": "0.1.0.dev0",
+        "parent_issue": "TRUGS-DEVELOPMENT#1555",
+        "super_trug": "REFERENCE/noise_chatbot.super.trug.json",
+        "license": "Apache-2.0"
+      },
+      "parent_id": null,
+      "contains": [
+        "doc_readme",
+        "doc_agent",
+        "doc_license",
+        "doc_notice",
+        "spec_pyproject",
+        "comp_src",
+        "test_suite"
+      ],
+      "metric_level": "KILO_FOLDER",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "doc_readme",
+      "type": "DOCUMENT",
+      "properties": {
+        "name": "README.md",
+        "purpose": "Human-facing entry point — what this is, how to install and test.",
+        "audience": "everyone"
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_DOCUMENT",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "doc_agent",
+      "type": "DOCUMENT",
+      "properties": {
+        "name": "AGENT.md",
+        "purpose": "LLM orientation — TRL blocks, rules, navigation, design invariants.",
+        "audience": "llm-agents"
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_DOCUMENT",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "doc_license",
+      "type": "DOCUMENT",
+      "properties": {
+        "name": "LICENSE",
+        "purpose": "Apache License 2.0, verbatim.",
+        "license": "Apache-2.0"
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_DOCUMENT",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "doc_notice",
+      "type": "DOCUMENT",
+      "properties": {
+        "name": "NOTICE",
+        "purpose": "Apache 2.0 §4d attribution — upstream noise-chatbot (Go), noiseprotocol, Noise Protocol Framework."
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_DOCUMENT",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "spec_pyproject",
+      "type": "SPECIFICATION",
+      "properties": {
+        "name": "pyproject.toml",
+        "purpose": "PEP 621 project metadata — name, version, deps, scripts, ruff/mypy/pytest/coverage config.",
+        "build_backend": "setuptools",
+        "python_requires": ">=3.10"
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_SPECIFICATION",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "comp_src",
+      "type": "COMPONENT",
+      "properties": {
+        "name": "src",
+        "purpose": "Python source tree — mirrors the Go package layout (noise, protocol, server, client, helper, examples).",
+        "phase": "B-scaffold",
+        "implementation_status": "NotImplementedError stubs with TRL contracts"
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "DEKA_COMPONENT",
+      "dimension": "folder_structure"
+    },
+    {
+      "id": "test_suite",
+      "type": "TEST_SUITE",
+      "properties": {
+        "name": "tests",
+        "purpose": "unit/ (fast isolated), integration/ (real transport), parity/ (Go-golden YAML from TRUGS-DEVELOPMENT#1555).",
+        "levels": ["unit", "integration", "parity"]
+      },
+      "parent_id": "noise_chatbot_python_folder",
+      "contains": [],
+      "metric_level": "BASE_TEST_SUITE",
+      "dimension": "folder_structure"
+    }
+  ],
+  "edges": [
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "doc_readme",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "doc_agent",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "doc_license",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "doc_notice",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "spec_pyproject",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "comp_src",
+      "relation": "contains"
+    },
+    {
+      "from_id": "noise_chatbot_python_folder",
+      "to_id": "test_suite",
+      "relation": "contains"
+    },
+    {
+      "from_id": "spec_pyproject",
+      "to_id": "comp_src",
+      "relation": "governs"
+    },
+    {
+      "from_id": "doc_readme",
+      "to_id": "comp_src",
+      "relation": "describes"
+    },
+    {
+      "from_id": "doc_agent",
+      "to_id": "comp_src",
+      "relation": "describes"
+    },
+    {
+      "from_id": "test_suite",
+      "to_id": "comp_src",
+      "relation": "tests"
+    }
+  ]
+}

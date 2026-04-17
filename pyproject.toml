@@ -1,0 +1,122 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noise-chatbot"
+version = "0.1.0.dev0"
+description = "Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b). Python reimplementation of TRUGS-LLC/noise-chatbot (Go), regenerated from noise_chatbot.super.trug.json per the TRUG-driven rewrite methodology."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "TRUGS LLC" },
+]
+keywords = ["noise-protocol", "chatbot", "encryption", "trug", "noise-ik"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat",
+    "Topic :: Security :: Cryptography",
+]
+dependencies = [
+    # Noise Protocol Framework in Python
+    "noiseprotocol>=0.3.1",
+    # Graph storage backend for TRUG-shaped state (banned keys, response nodes, guardrails)
+    "trugs-store>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.23",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+noise-helper = "noise_chatbot.helper.main:main"
+
+[project.urls]
+Homepage = "https://github.com/TRUGS-LLC/noise-chatbot"
+Repository = "https://github.com/TRUGS-LLC/noise-chatbot"
+Issues = "https://github.com/TRUGS-LLC/noise-chatbot/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["noise_chatbot*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Strict-but-reasonable ruleset. E/F are pyflakes+pycodestyle core; I is
+# import sorting; UP handles modern-Python upgrades; B is flake8-bugbear;
+# A is shadowing builtins; C4 comprehensions; SIM flake8-simplify;
+# PL = pylint subset; RUF ruff-specific.
+select = ["E", "F", "I", "UP", "B", "A", "C4", "SIM", "PLE", "RUF"]
+ignore = [
+    "E501",  # line too long — ruff-format owns line length
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["PLE"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+files = ["src", "tests"]
+
+# Phase B scaffold: function bodies are NotImplementedError stubs.
+# Phase C fills them in. Relax a few rules that fire on stubs.
+[[tool.mypy.overrides]]
+module = "noiseprotocol.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "trugs_store.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "parity: Go-golden behaviour-parity tests (require noise-helper + parity-harness binaries)",
+    "integration: integration tests using real Noise transport",
+    "slow: tests taking > 1 second",
+]
+
+[tool.coverage.run]
+source = ["src/noise_chatbot"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

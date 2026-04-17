@@ -1,0 +1,11 @@
+noise-chatbot (Python)
+Copyright 2026 TRUGS LLC
+
+This product is a Python reimplementation of the Go project originally
+published as TRUGS-LLC/noise-chatbot. Behavioural parity with the Go
+implementation is validated by the behavior-parity test corpus under
+tests/parity/.
+
+This product includes software developed by:
+- The Noise Protocol Framework (https://noiseprotocol.org/)
+- python-noiseprotocol (https://github.com/plizonczyk/noiseprotocol), BSD 3-Clause
