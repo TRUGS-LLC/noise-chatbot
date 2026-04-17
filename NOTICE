@@ -1,7 +1,22 @@
-Noise Chatbot
-Copyright 2026 TRUGS LLC
+noise-chatbot-go
+Copyright 2026 Xepayac
 
-Licensed under the Apache License, Version 2.0.
+This repository was previously published as TRUGS-LLC/noise-chatbot under
+the Apache License 2.0. It has been transferred to Xepayac and relicensed
+to the GNU Affero General Public License v3.0 (AGPL-3.0-only).
+
+Relicense authority: sole contributor Xepayac, verified in
+https://github.com/Xepayac/TRUGS-DEVELOPMENT/issues/1550.
+
+Successor for public use:
+  The actively-developed, TRUG-generated Python rewrite is published
+  under the Apache License 2.0 at:
+
+    https://github.com/TRUGS-LLC/noise-chatbot
+
+  See REFERENCE/ in this repository for the Phase A specification
+  artefacts (super-TRUG + behaviour-parity corpus) from which the
+  Python rewrite was regenerated.
 
 This product includes the Noise Protocol Framework implementation
 using flynn/noise (BSD License).
