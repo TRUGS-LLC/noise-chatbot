@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib
 
 
+# AGENT SHALL VALIDATE MODULE noise_chatbot.
 def test_package_imports() -> None:
     """The top-level package imports cleanly."""
     mod = importlib.import_module("noise_chatbot")
@@ -17,6 +18,7 @@ def test_package_imports() -> None:
     assert mod.__version__.startswith("0.1.0")
 
 
+# AGENT SHALL VALIDATE MODULE submodules.
 def test_submodules_import() -> None:
     """Every documented submodule imports cleanly."""
     for name in (
@@ -30,6 +32,7 @@ def test_submodules_import() -> None:
         importlib.import_module(name)
 
 
+# AGENT SHALL VALIDATE INTERFACE public_api.
 def test_public_api_surface_declared() -> None:
     """Each subpackage exposes its __all__ list."""
     for name, expected_min_size in (

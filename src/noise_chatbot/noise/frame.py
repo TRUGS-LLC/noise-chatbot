@@ -27,6 +27,7 @@ def _recv_exact(conn: socket.socket, n: int) -> bytes:
 HANDSHAKE_FRAME_MAX_BYTES: int = 65_536
 
 
+# FUNCTION write_frame SHALL WRITE DATA TO RESOURCE conn.
 def write_frame(conn: socket.socket, data: bytes) -> None:
     """Write a 4-byte big-endian length prefix followed by ``data`` to ``conn``.
 
@@ -40,6 +41,7 @@ def write_frame(conn: socket.socket, data: bytes) -> None:
     conn.sendall(struct.pack(">I", len(data)) + data)
 
 
+# FUNCTION read_frame SHALL READ DATA FROM RESOURCE conn.
 def read_frame(conn: socket.socket) -> bytes:
     """Read a length-prefixed frame; reject frames over 65 536 bytes.
 

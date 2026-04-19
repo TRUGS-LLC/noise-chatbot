@@ -21,6 +21,7 @@ from noise_chatbot.noise.keys import DHKey
 _NOISE_PROTOCOL_NAME: bytes = b"Noise_IK_25519_ChaChaPoly_BLAKE2b"
 
 
+# AGENT listener SHALL RECEIVE RESOURCE.
 @dataclass(slots=True)
 class Listener:
     """Wraps a TCP listen socket plus the server's static keypair.
@@ -35,6 +36,7 @@ class Listener:
     inner: socket.socket
     server_key: DHKey
 
+    # FUNCTION accept SHALL RECEIVE RESOURCE conn THEN AUTHENTICATE PARTY client.
     def accept(self) -> NoiseConn:
         """Block until a client connects, perform the responder handshake.
 
@@ -53,6 +55,7 @@ class Listener:
             conn.close()
             raise
 
+    # FUNCTION close SHALL REVOKE RESOURCE listener.
     def close(self) -> None:
         """Close the listen socket.
 
@@ -61,6 +64,7 @@ class Listener:
         with contextlib.suppress(OSError):
             self.inner.close()
 
+    # FUNCTION addr SHALL RETURNS_TO SOURCE ENDPOINT addr.
     def addr(self) -> tuple[str, int]:
         """Return the bound ``(host, port)``.
 
@@ -70,6 +74,7 @@ class Listener:
         return (host, port)
 
 
+# FUNCTION listen SHALL DEFINE RESOURCE.
 def listen(addr: str, server_key: DHKey) -> Listener:
     """Start a TCP listener bound to the server's static key.
 
@@ -91,6 +96,7 @@ def listen(addr: str, server_key: DHKey) -> Listener:
     return Listener(inner=s, server_key=server_key)
 
 
+# FUNCTION server_handshake SHALL AUTHENTICATE PARTY client.
 def server_handshake(conn: socket.socket, server_key: DHKey) -> NoiseConn:
     """Perform the Noise_IK responder handshake, extract client's static pubkey.
 

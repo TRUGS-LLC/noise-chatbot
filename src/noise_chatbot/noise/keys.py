@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 
 
 @dataclass(frozen=True, slots=True)
+# AGENT dhkey SHALL DEFINE DATA.
 class DHKey:
     """A Noise static Curve25519 keypair.
 
@@ -32,6 +33,7 @@ class DHKey:
     private: bytes
 
 
+# FUNCTION generate_keypair SHALL DEFINE RECORD dhkey.
 def generate_keypair() -> DHKey:
     """Generate a fresh Curve25519 static keypair using secure random entropy.
 
@@ -55,6 +57,7 @@ def generate_keypair() -> DHKey:
     return DHKey(public=public_bytes, private=private_bytes)
 
 
+# FUNCTION key_to_hex SHALL MAP DATA.
 def key_to_hex(key: bytes) -> str:
     """Encode a byte slice as a lowercase hexadecimal string.
 
@@ -67,6 +70,7 @@ def key_to_hex(key: bytes) -> str:
     return key.hex()
 
 
+# FUNCTION hex_to_key SHALL VALIDATE DATA THEN MAP DATA.
 def hex_to_key(s: str) -> bytes:
     """Decode a hex string to a 32-byte key.
 

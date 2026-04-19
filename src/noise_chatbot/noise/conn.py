@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 DATA_FRAME_MAX_BYTES: int = 16 * 1024 * 1024
 
 
+# AGENT noiseconn SHALL SEND DATA THEN RECEIVE DATA.
 class NoiseConn:
     """An encrypted connection wrapping a raw ``socket.socket``.
 
@@ -60,6 +61,7 @@ class NoiseConn:
         self._wmu = threading.Lock()
         self._rmu = threading.Lock()
 
+    # FUNCTION send SHALL WRITE DATA TO RESOURCE conn.
     def send(self, msg: bytes) -> None:
         """Encrypt ``msg``, write 4-byte big-endian length + ciphertext to the wire.
 
@@ -85,6 +87,7 @@ class NoiseConn:
             # two-call ordering (4-byte BE length first, then ciphertext).
             self._conn.sendall(struct.pack(">I", len(ciphertext)) + ciphertext)
 
+    # FUNCTION receive SHALL READ DATA FROM RESOURCE conn.
     def receive(self) -> bytes:
         """Read length-prefixed ciphertext, decrypt, return plaintext.
 
@@ -124,6 +127,7 @@ class NoiseConn:
                 raise RuntimeError(f"noise decrypt: {exc}") from exc
             return plaintext
 
+    # FUNCTION close SHALL REVOKE RESOURCE conn.
     def close(self) -> None:
         """Close the underlying socket.
 
@@ -132,6 +136,7 @@ class NoiseConn:
         with contextlib.suppress(OSError):
             self._conn.close()
 
+    # FUNCTION remote_identity SHALL RETURNS_TO SOURCE DATA remote.
     def remote_identity(self) -> bytes:
         """Return the peer's static Curve25519 public key.
 

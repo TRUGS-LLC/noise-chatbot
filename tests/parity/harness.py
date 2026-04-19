@@ -55,6 +55,7 @@ def _write_temp_guardrail_trug(nodes: list[ResponseNode]) -> str:
         return f.name
 
 
+# FUNCTION main SHALL READ DATA.
 def main() -> int:
     raw = sys.stdin.read()
     cfg: dict[str, Any] = json.loads(raw) if raw.strip() else {}

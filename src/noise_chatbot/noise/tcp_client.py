@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 _NOISE_PROTOCOL_NAME: bytes = b"Noise_IK_25519_ChaChaPoly_BLAKE2b"
 
 
+# FUNCTION dial SHALL REQUEST RESOURCE conn FROM ENDPOINT addr.
 def dial(addr: str, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
     """TCP-dial ``addr`` then perform the Noise_IK initiator handshake.
 
@@ -62,6 +63,7 @@ def dial(addr: str, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
         raise
 
 
+# FUNCTION client_handshake SHALL AUTHENTICATE TO ENDPOINT server.
 def client_handshake(conn: socket.socket, client_key: DHKey, server_pub_key: bytes) -> NoiseConn:
     """Perform the Noise_IK initiator handshake on an already-connected socket.
 

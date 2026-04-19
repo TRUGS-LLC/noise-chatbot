@@ -29,12 +29,14 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
+# AGENT harness SHALL DEFINE RESOURCE.
 @dataclass
 class Harness:
     proc: subprocess.Popen[str]
     host_port: str
     pubkey: str
 
+    # FUNCTION stop SHALL REVOKE RESOURCE.
     def stop(self) -> None:
         if self.proc.poll() is None:
             self.proc.terminate()
@@ -44,6 +46,7 @@ class Harness:
                 self.proc.kill()
 
 
+# FUNCTION start_harness SHALL DEFINE RESOURCE.
 def start_harness(
     harness_cmd: list[str], config: dict[str, Any], startup_timeout: float = 5.0
 ) -> Harness:
@@ -73,16 +76,19 @@ def start_harness(
     raise RuntimeError(f"harness did not emit READY within {startup_timeout}s")
 
 
+# AGENT helpersession SHALL DEFINE RESOURCE.
 @dataclass
 class HelperSession:
     proc: subprocess.Popen[str]
     _buf: str = ""
 
+    # FUNCTION send SHALL WRITE DATA.
     def send(self, msg: dict[str, Any]) -> None:
         assert self.proc.stdin is not None
         self.proc.stdin.write(json.dumps(msg) + "\n")
         self.proc.stdin.flush()
 
+    # FUNCTION recv SHALL RECEIVE DATA.
     def recv(self, timeout: float = 5.0) -> dict[str, Any]:
         import select
 
@@ -103,6 +109,7 @@ class HelperSession:
         decoded: dict[str, Any] = json.loads(line)
         return decoded
 
+    # FUNCTION close SHALL REVOKE RESOURCE.
     def close(self) -> None:
         if self.proc.poll() is None:
             try:
@@ -116,6 +123,7 @@ class HelperSession:
                 self.proc.kill()
 
 
+# FUNCTION connect_helper SHALL AUTHENTICATE.
 def connect_helper(
     helper_cmd: list[str], host_port: str, pubkey: str, timeout: float = 5.0
 ) -> HelperSession:
@@ -141,6 +149,7 @@ def connect_helper(
     raise TimeoutError("helper did not print CONNECTED")
 
 
+# AGENT fixtureresult SHALL DEFINE RECORD.
 @dataclass
 class FixtureResult:
     name: str
@@ -149,6 +158,7 @@ class FixtureResult:
     observed: list[dict[str, Any]] = field(default_factory=list)
 
 
+# FUNCTION run_fixture SHALL VALIDATE DATA.
 def run_fixture(
     fixture: dict[str, Any], harness_cmd: list[str], helper_cmd: list[str]
 ) -> FixtureResult:
@@ -213,6 +223,7 @@ def run_fixture(
     return result
 
 
+# FUNCTION compare SHALL VALIDATE DATA.
 def compare(observed: dict[str, Any], expect: dict[str, Any]) -> list[str]:
     errs = []
     if "type" in expect and observed.get("type") != expect["type"]:
@@ -251,6 +262,7 @@ def compare(observed: dict[str, Any], expect: dict[str, Any]) -> list[str]:
     return errs
 
 
+# FUNCTION main SHALL VALIDATE DATA.
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("fixtures", nargs="+", type=Path)

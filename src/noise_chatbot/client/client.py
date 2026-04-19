@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from noise_chatbot.noise.conn import NoiseConn
 
 
+# AGENT client SHALL AUTHENTICATE TO ENDPOINT server.
 class Client:
     """An encrypted chatbot client — thin wrapper over a NoiseConn.
 
@@ -30,6 +31,7 @@ class Client:
     def __init__(self, conn: NoiseConn) -> None:
         self._conn = conn
 
+    # FUNCTION chat SHALL SEND RECORD message TO ENDPOINT server.
     def chat(self, text: str) -> str:
         """Send a CHAT message, await the response, return its ``text`` payload.
 
@@ -51,6 +53,7 @@ class Client:
         text_out: str = resp.payload.get("text", "") if isinstance(resp.payload, dict) else ""
         return text_out
 
+    # FUNCTION send SHALL SEND RECORD message THEN RECEIVE RECORD message.
     def send(self, msg: Message) -> Message:
         """Marshal + send + receive + unmarshal a full Message.
 
@@ -65,6 +68,7 @@ class Client:
         raw = self._conn.receive()
         return Message.from_json(raw)
 
+    # FUNCTION close SHALL REVOKE RESOURCE conn.
     def close(self) -> None:
         """Close the underlying Noise connection.
 
@@ -73,6 +77,7 @@ class Client:
         self._conn.close()
 
 
+# FUNCTION connect SHALL AUTHENTICATE TO ENDPOINT server.
 def connect(addr: str, server_public_key_hex: str) -> Client:
     """Decode the server's hex pubkey, generate ephemeral client keypair, dial.
 

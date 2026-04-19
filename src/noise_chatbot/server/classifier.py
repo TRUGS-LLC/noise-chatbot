@@ -27,6 +27,7 @@ the "LLM never composes" invariant.
 """
 
 
+# FUNCTION default_classifier SHALL MAP DATA.
 def default_classifier(user_text: str, nodes: list[ResponseNode]) -> list[str]:
     """Case-insensitive substring-match classifier.
 

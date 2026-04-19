@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+# AGENT message SHALL DEFINE RECORD.
 @dataclass(slots=True)
 class Message:
     """Wire envelope for all Noise Chatbot communication.
@@ -41,6 +42,7 @@ class Message:
     id: str = ""
     reply_to: str = ""
 
+    # FUNCTION to_json SHALL MAP RECORD.
     def to_json(self) -> str:
         """Serialise to JSON with ``reply_to`` omitted when empty.
 
@@ -60,6 +62,7 @@ class Message:
             doc["reply_to"] = self.reply_to
         return json.dumps(doc)
 
+    # FUNCTION from_json SHALL MAP DATA.
     @classmethod
     def from_json(cls, data: bytes | str) -> Message:
         """Parse a JSON payload into a Message.

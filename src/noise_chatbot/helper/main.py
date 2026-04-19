@@ -35,6 +35,7 @@ from noise_chatbot.noise.keys import generate_keypair, hex_to_key
 from noise_chatbot.noise.tcp_client import dial
 
 
+# FUNCTION main SHALL AUTHENTICATE THEN READ DATA FROM ENTRY stdin.
 def main(argv: list[str] | None = None) -> int:
     """Parse flags, handshake, spawn reader thread, run stdin→server loop.
 

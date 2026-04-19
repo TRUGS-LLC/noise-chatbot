@@ -47,6 +47,7 @@ ChatHandler = Callable[[str], str]
 MessageHandler = Callable[[Message], Message]
 
 
+# AGENT responsenode SHALL DEFINE RECORD.
 @dataclass(slots=True)
 class ResponseNode:
     """A pre-authored response — ID, keywords, verbatim text.
@@ -61,6 +62,7 @@ class ResponseNode:
     response: str
 
 
+# AGENT safetyconfig SHALL DEFINE RECORD.
 @dataclass(slots=True)
 class SafetyConfig:
     """Per-server safety knobs.
@@ -80,6 +82,7 @@ class SafetyConfig:
     confidence_min: int = 1
 
 
+# AGENT connectionstats SHALL DEFINE RECORD.
 @dataclass(slots=True)
 class ConnectionStats:
     """Per-connection analytics counters."""
@@ -91,6 +94,7 @@ class ConnectionStats:
     last_message_at: datetime | None = None
 
 
+# AGENT llmconfig SHALL DEFINE RECORD.
 @dataclass(slots=True)
 class LLMConfig:
     """LLM classifier configuration — stored, not auto-wired."""
@@ -125,6 +129,7 @@ _MATCH_CAP = 3
 _TOKEN_CHARS_PER_TOKEN = 4
 
 
+# AGENT chatbot_server SHALL RECEIVE DATA THEN SEND DATA.
 class Server:
     """Encrypted chatbot server — template mode + honeypot + wind-down."""
 
@@ -189,14 +194,17 @@ class Server:
 
     # ── Builder methods ──────────────────────────────────────────────
 
+    # FUNCTION with_safety SHALL DEFINE RECORD.
     def with_safety(self, cfg: SafetyConfig) -> Server:
         self._safety = cfg
         return self
 
+    # FUNCTION with_greeting SHALL DEFINE DATA.
     def with_greeting(self, text: str) -> Server:
         self._safety.greeting = text
         return self
 
+    # FUNCTION with_guardrails SHALL READ DATA.
     def with_guardrails(self, path: str | Path) -> Server:
         try:
             data = Path(path).read_bytes()
@@ -221,14 +229,17 @@ class Server:
         _log.info("Loaded %d guardrail nodes from %s", added, path)
         return self
 
+    # FUNCTION on_analytics SHALL DEFINE PROCESS.
     def on_analytics(self, fn: AnalyticsCallback) -> Server:
         self._on_analytics = fn
         return self
 
+    # FUNCTION with_responses SHALL DEFINE DATA.
     def with_responses(self, nodes: list[ResponseNode]) -> Server:
         self._responses = list(nodes)
         return self
 
+    # FUNCTION with_responses_from_trug SHALL READ DATA.
     def with_responses_from_trug(self, path: str | Path) -> Server:
         try:
             data = Path(path).read_bytes()
@@ -255,30 +266,37 @@ class Server:
         _log.info("Loaded %d response nodes from %s", len(nodes), path)
         return self
 
+    # FUNCTION with_classifier SHALL DEFINE PROCESS.
     def with_classifier(self, classifier: Classifier) -> Server:
         self._classifier = classifier
         return self
 
+    # FUNCTION with_fallback_classifier SHALL DEFINE PROCESS.
     def with_fallback_classifier(self, classifier: Classifier) -> Server:
         self._fallback_classifier = classifier
         return self
 
+    # FUNCTION with_no_match SHALL DEFINE DATA.
     def with_no_match(self, text: str) -> Server:
         self._no_match_text = text
         return self
 
+    # FUNCTION with_contact_footer SHALL DEFINE DATA.
     def with_contact_footer(self, footer: str) -> Server:
         self._contact_footer = footer
         return self
 
+    # FUNCTION on_chat SHALL DEFINE PROCESS.
     def on_chat(self, handler: ChatHandler) -> Server:
         self._chat_handler = handler
         return self
 
+    # FUNCTION on_message SHALL DEFINE PROCESS.
     def on_message(self, handler: MessageHandler) -> Server:
         self._msg_handler = handler
         return self
 
+    # FUNCTION with_trug SHALL READ DATA.
     def with_trug(self, path: str | Path) -> Server:
         try:
             data = Path(path).read_bytes()
@@ -291,10 +309,12 @@ class Server:
             self._trug_data = None
         return self
 
+    # FUNCTION with_llm SHALL DEFINE RECORD.
     def with_llm(self, provider: str, model: str, api_key_env: str) -> Server:
         self._llm_config = LLMConfig(provider=provider, model=model, api_key_env=api_key_env)
         return self
 
+    # FUNCTION with_upstream SHALL DEFINE DATA.
     def with_upstream(self, addr: str, key: str) -> Server:
         self._upstream_addr = addr
         self._upstream_key = key
@@ -302,15 +322,19 @@ class Server:
 
     # ── Getters ──────────────────────────────────────────────────────
 
+    # FUNCTION key SHALL RETURNS_TO SOURCE.
     def key(self) -> DHKey:
         return self._key
 
+    # FUNCTION public_key SHALL RETURNS_TO SOURCE.
     def public_key(self) -> str:
         return key_to_hex(self._key.public)
 
+    # FUNCTION get_trug_context SHALL RETURNS_TO SOURCE.
     def get_trug_context(self) -> str:
         return self._build_trug_context()
 
+    # FUNCTION get_responses SHALL RETURNS_TO SOURCE.
     def get_responses(self) -> list[ResponseNode]:
         return self._responses
 
@@ -333,6 +357,7 @@ class Server:
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
+    # FUNCTION listen_and_serve SHALL RECEIVE DATA.
     def listen_and_serve(self) -> None:
         listener = listen(self._addr, self._key)
         self._listener = listener
@@ -357,10 +382,12 @@ class Server:
             _signal.signal(_signal.SIGINT, old_int)
             _signal.signal(_signal.SIGTERM, old_term)
 
+    # FUNCTION serve_listener SHALL RECEIVE DATA.
     def serve_listener(self, listener: Listener) -> None:
         self._listener = listener
         self._accept_loop(listener)
 
+    # FUNCTION stop SHALL REVOKE RESOURCE.
     def stop(self) -> None:
         self._stop.set()
         if self._listener is not None:
