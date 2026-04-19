@@ -22,13 +22,14 @@ s.listen_and_serve()
 Same reasons as the Go original — encrypted end-to-end chatbot with no TLS certificates, no DNS, no MITM window — plus:
 
 - Drop-in replacement for Python teams already on the Python-AI ecosystem.
-- First-class `trugs-store` integration for TRUG-shaped persistent state.
+- **Pluggable stores.** Guardrails, responses, banned keys, and the TRUG knowledge base each live behind a tiny `Protocol`. Ship with the zero-dependency in-memory / JSON-file defaults, or opt in to the graph-backed [`trugs-store`](https://github.com/TRUGS-LLC/TRUGS-STORE) adapter for persistent state. See [Stores](#stores) below.
 - Apache 2.0 (matching the Go original's license pre-#1550-relicense).
 
 ## Install
 
 ```bash
-pip install noise-chatbot  # (not yet on PyPI — Phase E)
+pip install noise-chatbot          # standalone — in-memory + JSON-file stores
+pip install noise-chatbot[trugs]   # + trugs-store graph adapter
 ```
 
 From source during development:
@@ -36,8 +37,54 @@ From source during development:
 ```bash
 git clone https://github.com/TRUGS-LLC/noise-chatbot
 cd noise-chatbot
-pip install -e ".[dev]"
+pip install -e ".[dev]"            # includes trugs-store for the full test suite
 ```
+
+## Stores
+
+The `Server` holds four kinds of swappable persistent-state:
+
+| Protocol | What it does | In-memory default | JSON-file | `[trugs]` extra |
+|---|---|---|---|---|
+| `GuardrailStore` | Pre-authored boundary responses | compiled-in 15 nodes | — | `TrugsGuardrailStore` |
+| `ResponseStore` | Classifier match targets | empty list | `JsonFileResponseStore(path)` | `TrugsResponseStore` |
+| `BannedKeyStore` | TTL-bounded bans (slowdown, not prevention) | `InMemoryBannedKeyStore(ttl=72h)` | `JsonFileBannedKeyStore(path, ttl)` | `TrugsBannedKeyStore` |
+| `KnowledgeBaseStore` | TRUG context injection | empty | `JsonFileKnowledgeBaseStore(path)` | `TrugsKnowledgeBaseStore` |
+
+Wire one in via the builder API:
+
+```python
+from datetime import timedelta
+from noise_chatbot.server import Server
+from noise_chatbot.stores import JsonFileBannedKeyStore, JsonFileResponseStore
+
+s = (
+    Server(":9090")
+    .with_response_store(JsonFileResponseStore("responses.trug.json"))
+    .with_banned_keys(JsonFileBannedKeyStore("bans.json", ttl=timedelta(hours=72)))
+)
+```
+
+Or the legacy path-based shortcuts (preserved — they now wrap the stores internally):
+
+```python
+s = Server(":9090").with_responses_from_trug("responses.trug.json")
+```
+
+### Opting in to trugs-store
+
+```python
+# pip install noise-chatbot[trugs]
+from trugs_store import JsonFilePersistence
+from noise_chatbot.stores.trugs import TrugsBannedKeyStore
+
+graph = JsonFilePersistence().load("chatbot.trug.json")
+s = Server(":9090").with_banned_keys(TrugsBannedKeyStore(graph))
+# The graph is mutated in place — caller is responsible for persisting via
+# JsonFilePersistence.save() or the postgres backend before shutdown.
+```
+
+Every `BannedKeyStore` implementation is **required** (by the Protocol's type signature) to enforce `ttl: timedelta` expiry. No permanent-ban implementation is possible — bans are a slowdown mechanism, not prevention.
 
 ## Architecture
 
@@ -72,4 +119,4 @@ Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 Built on:
 - The [Noise Protocol Framework](https://noiseprotocol.org/)
 - [`noiseprotocol`](https://github.com/plizonczyk/noiseprotocol) (BSD 3-Clause)
-- [`trugs-store`](https://github.com/TRUGS-LLC/trugs-store) for graph persistence
+- [`trugs-store`](https://github.com/TRUGS-LLC/TRUGS-STORE) — optional, via the `[trugs]` extra

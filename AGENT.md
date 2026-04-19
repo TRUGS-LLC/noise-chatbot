@@ -22,6 +22,7 @@ A Python reimplementation of [`TRUGS-LLC/noise-chatbot`](https://github.com/TRUG
 | `src/noise_chatbot/noise/` | Noise_IK transport — handshake, encryption, framing | `noise/` |
 | `src/noise_chatbot/protocol/` | Wire format — `Message` type | `protocol/` |
 | `src/noise_chatbot/server/` | Chatbot server — `Server`, safety, guardrails, honeypot | `server/` |
+| `src/noise_chatbot/stores/` | Pluggable persistent-state protocols + InMemory / JsonFile defaults + optional Trugs adapter | N/A (Python-era addition) |
 | `src/noise_chatbot/client/` | Client library — `connect`, `chat`, `send`, `close` | `client/` |
 | `src/noise_chatbot/helper/` | `noise-helper` stdin/stdout bridge binary | `helper/` |
 | `src/noise_chatbot/examples/` | `echo`, `faq`, `llm`, `graph` | `examples/` |
@@ -40,6 +41,25 @@ SERVICE Server SHALL READ RECORD response FROM RECORD ResponseNode
 </trl>
 
 The LLM classifies — picks node IDs from the TRUG. It NEVER composes response text. Every word the user sees was written by a human and stored in a `ResponseNode`.
+
+## Pluggable stores — design rule
+
+<trl>
+RECORD Server CONTAINS PROCESS GuardrailStore AND PROCESS ResponseStore
+    AND PROCESS BannedKeyStore AND PROCESS KnowledgeBaseStore.
+AGENT SHALL_NOT DEFINE ANY RECORD state 'that 'is NOT BEHIND PROCESS store.
+EACH PROCESS BannedKeyStore SHALL ENFORCE RECORD ttl.
+</trl>
+
+Persistent state lives behind four `Protocol`s in `noise_chatbot.stores`:
+`GuardrailStore`, `ResponseStore`, `BannedKeyStore` (TTL-enforced), `KnowledgeBaseStore`. Defaults are in-memory / JSON-file (zero deps). The optional `[trugs]` extra adds graph-backed adapters via `noise_chatbot.stores.trugs`.
+
+**Rules for agents editing state:**
+- **Never add ad-hoc state dicts to `Server.__init__`.** Route new persistent state through a `Protocol` in `noise_chatbot/stores/protocols.py`. If an existing protocol doesn't fit, propose a fifth — don't work around them with raw fields.
+- **Never use `trugs_store` at module-top in the base package.** Only `noise_chatbot.stores.trugs` is allowed to import it, and it must be loaded lazily by callers (`from noise_chatbot.stores.trugs import ...`). Base install remains zero external deps.
+- **Never implement a permanent-ban surface.** Every `BannedKeyStore` implementation must honor `ttl: timedelta`. The threat model is slowdown, not prevention (see `REFERENCE/LAB_1596_noise_chatbot_extras.md`).
+
+The design decisions, coding plan, risk log, and audit checklist for the extras refactor live in [`REFERENCE/LAB_1596_noise_chatbot_extras.md`](https://github.com/Xepayac/TRUGS-DEVELOPMENT/blob/main/REFERENCE/LAB_1596_noise_chatbot_extras.md).
 
 ## Hard rules for agents
 

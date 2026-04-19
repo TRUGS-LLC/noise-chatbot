@@ -262,3 +262,105 @@ def test_stop_sets_event() -> None:
     assert not s._stop.is_set()
     s.stop()
     assert s._stop.is_set()
+
+
+# ── Store builders (Protocol-backed surface) ──────────────────────────
+
+
+# AGENT SHALL VALIDATE PROCESS default_stores_are_in_memory.
+def test_default_stores_are_in_memory() -> None:
+    """Fresh Server has InMemory defaults for all four stores."""
+    from noise_chatbot.stores import (
+        BannedKeyStore,
+        GuardrailStore,
+        InMemoryBannedKeyStore,
+        InMemoryGuardrailStore,
+        InMemoryKnowledgeBaseStore,
+        InMemoryResponseStore,
+        KnowledgeBaseStore,
+        ResponseStore,
+    )
+
+    s = Server("127.0.0.1:0")
+    assert isinstance(s._guardrail_store, InMemoryGuardrailStore)
+    assert isinstance(s._response_store, InMemoryResponseStore)
+    assert isinstance(s._banned_key_store, InMemoryBannedKeyStore)
+    assert isinstance(s._knowledge_base_store, InMemoryKnowledgeBaseStore)
+    # Runtime-checkable Protocol check
+    assert isinstance(s._guardrail_store, GuardrailStore)
+    assert isinstance(s._response_store, ResponseStore)
+    assert isinstance(s._banned_key_store, BannedKeyStore)
+    assert isinstance(s._knowledge_base_store, KnowledgeBaseStore)
+
+
+# AGENT SHALL VALIDATE PROCESS with_guardrail_store_injects.
+def test_with_guardrail_store_injects() -> None:
+    """``with_guardrail_store`` replaces the default and syncs _guardrails."""
+    from noise_chatbot.server.server import ResponseNode
+    from noise_chatbot.stores import InMemoryGuardrailStore
+
+    custom = InMemoryGuardrailStore(
+        [ResponseNode(id="custom-1", keywords=["x"], response="CUSTOM")]
+    )
+    s = Server("127.0.0.1:0").with_guardrail_store(custom)
+    assert s._guardrail_store is custom
+    assert len(s._guardrails) == 1
+    assert s._guardrails[0].id == "custom-1"
+
+
+# AGENT SHALL VALIDATE PROCESS with_response_store_injects.
+def test_with_response_store_injects() -> None:
+    """``with_response_store`` replaces the default and syncs _responses."""
+    from noise_chatbot.server.server import ResponseNode
+    from noise_chatbot.stores import InMemoryResponseStore
+
+    custom = InMemoryResponseStore([ResponseNode(id="pricing", keywords=["price"], response="$10")])
+    s = Server("127.0.0.1:0").with_response_store(custom)
+    assert s._response_store is custom
+    assert s.get_responses()[0].id == "pricing"
+
+
+# AGENT SHALL VALIDATE PROCESS with_banned_keys_injects.
+def test_with_banned_keys_injects() -> None:
+    """``with_banned_keys`` replaces the default ban store."""
+    from datetime import timedelta
+
+    from noise_chatbot.stores import InMemoryBannedKeyStore
+
+    custom = InMemoryBannedKeyStore(ttl=timedelta(minutes=30))
+    s = Server("127.0.0.1:0").with_banned_keys(custom)
+    assert s._banned_key_store is custom
+    assert s._banned_key_store.ttl == timedelta(minutes=30)
+
+
+# AGENT SHALL VALIDATE PROCESS with_knowledge_base_injects.
+def test_with_knowledge_base_injects() -> None:
+    """``with_knowledge_base`` replaces the default KB store and syncs _trug_data."""
+    from noise_chatbot.stores import InMemoryKnowledgeBaseStore
+
+    payload: dict[str, object] = {"name": "KB-test", "nodes": []}
+    s = Server("127.0.0.1:0").with_knowledge_base(InMemoryKnowledgeBaseStore(payload))
+    assert s._trug_data == payload
+
+
+# AGENT SHALL VALIDATE PROCESS legacy_path_wrappers_still_work.
+def test_legacy_path_wrappers_still_work(tmp_path: Path) -> None:
+    """Regression: with_trug(path) / with_responses_from_trug(path) still work
+    through the new JsonFile* store wrappers (R1 mitigation per LAB_1596)."""
+    trug = {"nodes": [{"id": "n1", "properties": {"name": "Hours", "description": "9-5"}}]}
+    p = tmp_path / "kb.json"
+    p.write_text(json.dumps(trug))
+    s = Server("127.0.0.1:0").with_trug(p)
+    # Legacy getter still works
+    assert "Hours" in s.get_trug_context()
+    # New store also reflects the load
+    assert s._knowledge_base_store.context() == trug
+
+
+# AGENT SHALL VALIDATE PROCESS banned_key_store_ttl_enforced.
+def test_banned_key_store_ttl_enforced() -> None:
+    """Default BannedKeyStore uses the Go parity 72h TTL."""
+    from datetime import timedelta
+
+    s = Server("127.0.0.1:0")
+    assert s._banned_key_store.ttl == timedelta(hours=72)

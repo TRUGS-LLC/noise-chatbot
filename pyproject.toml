@@ -31,11 +31,17 @@ dependencies = [
     # X25519 keygen (noiseprotocol accepts raw 32-byte keys; cryptography
     # generates them and derives public keys).
     "cryptography>=41",
-    # Graph storage backend for TRUG-shaped state (banned keys, response nodes, guardrails)
-    "trugs-store>=0.1.0",
 ]
 
 [project.optional-dependencies]
+# Optional: graph-backed stores (guardrails, responses, banned keys,
+# knowledge base) persisted via the trugs-store graph layer. Install with
+#   pip install noise-chatbot[trugs]
+# Without this extra, noise-chatbot uses the InMemory and JsonFile default
+# stores from noise_chatbot.stores — zero external dependencies.
+trugs = [
+    "trugs-store>=0.1.0",
+]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
@@ -43,6 +49,9 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.23",
     "pyyaml>=6.0",
+    # The dev extra pulls trugs-store in so the full test suite (including
+    # tests/unit/test_stores_trugs.py) runs against the adapter.
+    "trugs-store>=0.1.0",
 ]
 
 [project.scripts]

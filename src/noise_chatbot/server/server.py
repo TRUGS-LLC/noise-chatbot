@@ -28,6 +28,18 @@ from typing import TYPE_CHECKING, Any
 from noise_chatbot.noise.keys import DHKey, generate_keypair, key_to_hex
 from noise_chatbot.noise.server import Listener, listen
 from noise_chatbot.protocol.message import Message
+from noise_chatbot.stores import (
+    BannedKeyStore,
+    GuardrailStore,
+    InMemoryBannedKeyStore,
+    InMemoryGuardrailStore,
+    InMemoryKnowledgeBaseStore,
+    InMemoryResponseStore,
+    JsonFileKnowledgeBaseStore,
+    JsonFileResponseStore,
+    KnowledgeBaseStore,
+    ResponseStore,
+)
 
 if TYPE_CHECKING:
     from noise_chatbot.noise.conn import NoiseConn
@@ -135,19 +147,21 @@ class Server:
 
     __slots__ = (
         "_addr",
-        "_banned_keys",
-        "_banned_lock",
+        "_banned_key_store",
         "_chat_handler",
         "_classifier",
         "_contact_footer",
         "_fallback_classifier",
+        "_guardrail_store",
         "_guardrails",
         "_key",
+        "_knowledge_base_store",
         "_listener",
         "_llm_config",
         "_msg_handler",
         "_no_match_text",
         "_on_analytics",
+        "_response_store",
         "_responses",
         "_safety",
         "_stop",
@@ -185,8 +199,13 @@ class Server:
         self._fallback_classifier: Classifier | None = None
         self._no_match_text: str = _TEXT_DEFAULT_NO_MATCH
         self._safety = SafetyConfig()
-        self._banned_keys: dict[str, datetime] = {}
-        self._banned_lock = threading.Lock()
+        # Store protocols — default to in-memory, override via with_*_store builders.
+        # The store is the source of truth for API; internal lists above are the
+        # hot path updated by builders.
+        self._guardrail_store: GuardrailStore = InMemoryGuardrailStore(list(self._guardrails))
+        self._response_store: ResponseStore = InMemoryResponseStore()
+        self._banned_key_store: BannedKeyStore = InMemoryBannedKeyStore(ttl=_BAN_DURATION)
+        self._knowledge_base_store: KnowledgeBaseStore = InMemoryKnowledgeBaseStore()
         self._contact_footer: str = ""
         self._on_analytics: AnalyticsCallback | None = None
         self._listener: Listener | None = None
@@ -206,6 +225,11 @@ class Server:
 
     # FUNCTION with_guardrails SHALL READ DATA.
     def with_guardrails(self, path: str | Path) -> Server:
+        """Append custom guardrail nodes from a TRUG JSON file to the
+        compiled-in defaults. If a non-``InMemoryGuardrailStore`` has been
+        injected via ``with_guardrail_store()``, it's replaced with a new
+        in-memory store combining the current guardrails + the loaded ones.
+        """
         try:
             data = Path(path).read_bytes()
         except OSError as exc:
@@ -215,18 +239,24 @@ class Server:
             trug = json.loads(data)
         except json.JSONDecodeError:
             return self
-        added = 0
+        new_nodes: list[ResponseNode] = []
         for node in trug.get("nodes", []):
             props = node.get("properties", {}) or {}
             response = props.get("response", "")
             if not response:
                 continue
             keywords = [k for k in props.get("keywords", []) if isinstance(k, str)]
-            self._guardrails.append(
+            new_nodes.append(
                 ResponseNode(id=node.get("id", ""), keywords=keywords, response=response)
             )
-            added += 1
-        _log.info("Loaded %d guardrail nodes from %s", added, path)
+        if isinstance(self._guardrail_store, InMemoryGuardrailStore):
+            self._guardrail_store.extend(new_nodes)
+        else:
+            # Non-extendable store — rebuild as InMemoryGuardrailStore with current + new.
+            combined = [*self._guardrail_store.guardrails(), *new_nodes]
+            self._guardrail_store = InMemoryGuardrailStore(combined)
+        self._guardrails = list(self._guardrail_store.guardrails())
+        _log.info("Loaded %d guardrail nodes from %s", len(new_nodes), path)
         return self
 
     # FUNCTION on_analytics SHALL DEFINE PROCESS.
@@ -241,29 +271,11 @@ class Server:
 
     # FUNCTION with_responses_from_trug SHALL READ DATA.
     def with_responses_from_trug(self, path: str | Path) -> Server:
-        try:
-            data = Path(path).read_bytes()
-        except OSError as exc:
-            _log.warning("could not load TRUG %s: %s", path, exc)
-            return self
-        try:
-            trug = json.loads(data)
-        except json.JSONDecodeError as exc:
-            _log.warning("could not parse TRUG %s: %s", path, exc)
-            return self
-        nodes: list[ResponseNode] = []
-        for node in trug.get("nodes", []):
-            props = node.get("properties", {}) or {}
-            response = props.get("response") or props.get("description") or ""
-            if not response:
-                continue
-            keywords = [k for k in props.get("keywords", []) if isinstance(k, str)]
-            name = props.get("name", "")
-            if isinstance(name, str) and name:
-                keywords.append(name)
-            nodes.append(ResponseNode(id=node.get("id", ""), keywords=keywords, response=response))
-        self._responses = nodes
-        _log.info("Loaded %d response nodes from %s", len(nodes), path)
+        """Load response nodes from a TRUG JSON file (thin wrapper over
+        ``JsonFileResponseStore`` for backwards compatibility)."""
+        store = JsonFileResponseStore(path)
+        self.with_response_store(store)
+        _log.info("Loaded %d response nodes from %s", len(self._responses), path)
         return self
 
     # FUNCTION with_classifier SHALL DEFINE PROCESS.
@@ -298,15 +310,9 @@ class Server:
 
     # FUNCTION with_trug SHALL READ DATA.
     def with_trug(self, path: str | Path) -> Server:
-        try:
-            data = Path(path).read_bytes()
-        except OSError as exc:
-            _log.warning("could not load TRUG %s: %s", path, exc)
-            return self
-        try:
-            self._trug_data = json.loads(data)
-        except json.JSONDecodeError:
-            self._trug_data = None
+        """Load a TRUG knowledge base from a JSON file (thin wrapper over
+        ``JsonFileKnowledgeBaseStore`` for backwards compatibility)."""
+        self.with_knowledge_base(JsonFileKnowledgeBaseStore(path))
         return self
 
     # FUNCTION with_llm SHALL DEFINE RECORD.
@@ -318,6 +324,61 @@ class Server:
     def with_upstream(self, addr: str, key: str) -> Server:
         self._upstream_addr = addr
         self._upstream_key = key
+        return self
+
+    # ── Store builders (the Protocol-backed surface) ─────────────────
+
+    # FUNCTION with_guardrail_store SHALL DEFINE PROCESS.
+    def with_guardrail_store(self, store: GuardrailStore) -> Server:
+        """Inject a ``GuardrailStore`` implementation.
+
+        <trl>
+        FUNCTION with_guardrail_store SHALL DEFINE PROCESS store.
+        </trl>
+        """
+        self._guardrail_store = store
+        self._guardrails = list(store.guardrails())
+        return self
+
+    # FUNCTION with_response_store SHALL DEFINE PROCESS.
+    def with_response_store(self, store: ResponseStore) -> Server:
+        """Inject a ``ResponseStore`` implementation.
+
+        <trl>
+        FUNCTION with_response_store SHALL DEFINE PROCESS store.
+        </trl>
+        """
+        self._response_store = store
+        self._responses = list(store.responses())
+        return self
+
+    # FUNCTION with_banned_keys SHALL DEFINE PROCESS.
+    def with_banned_keys(self, store: BannedKeyStore) -> Server:
+        """Inject a ``BannedKeyStore`` implementation.
+
+        <trl>
+        FUNCTION with_banned_keys SHALL DEFINE PROCESS store.
+        </trl>
+
+        Example — persistent bans across restart::
+
+            server.with_banned_keys(
+                JsonFileBannedKeyStore("bans.json", ttl=timedelta(hours=72))
+            )
+        """
+        self._banned_key_store = store
+        return self
+
+    # FUNCTION with_knowledge_base SHALL DEFINE PROCESS.
+    def with_knowledge_base(self, store: KnowledgeBaseStore) -> Server:
+        """Inject a ``KnowledgeBaseStore`` implementation.
+
+        <trl>
+        FUNCTION with_knowledge_base SHALL DEFINE PROCESS store.
+        </trl>
+        """
+        self._knowledge_base_store = store
+        self._trug_data = store.context()
         return self
 
     # ── Getters ──────────────────────────────────────────────────────
@@ -417,13 +478,8 @@ class Server:
 
     def _serve_conn_body(self, conn: NoiseConn) -> None:
         key_hex = key_to_hex(conn.remote_identity())
-        with self._banned_lock:
-            banned_at = self._banned_keys.get(key_hex)
-        if banned_at is not None:
-            if (datetime.now() - banned_at) < _BAN_DURATION:
-                return
-            with self._banned_lock:
-                self._banned_keys.pop(key_hex, None)
+        if self._banned_key_store.is_banned(key_hex):
+            return
 
         stats = ConnectionStats(connected_at=datetime.now())
         guardrail_hits = 0
@@ -546,8 +602,7 @@ class Server:
                     try:
                         conn.send(farewell.to_json().encode("utf-8"))
                     finally:
-                        with self._banned_lock:
-                            self._banned_keys[key_hex] = datetime.now()
+                        self._banned_key_store.ban(key_hex)
                         _log.info(
                             "Temp-banned key %s for 3 days (40 questions reached)",
                             key_hex[:16],
@@ -601,8 +656,7 @@ class Server:
                 try:
                     conn.send(farewell.to_json().encode("utf-8"))
                 finally:
-                    with self._banned_lock:
-                        self._banned_keys[key_hex] = datetime.now()
+                    self._banned_key_store.ban(key_hex)
                     _log.info(
                         "Banned key %s (honeypot tier 5 \u2014 repeated probing)",
                         key_hex[:16],
