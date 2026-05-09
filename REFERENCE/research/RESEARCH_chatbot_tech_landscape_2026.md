@@ -1,46 +1,24 @@
-# 2026 AI Chatbot Technical Landscape
+# AI Chatbot Technical Landscape (2026)
 
 **Source:** Gemini Deep Research, 2026-03-28
-**Purpose:** Technology intelligence for chatbot + SaltWind development
+**Purpose:** Reference snapshot of the public chatbot ecosystem for `noise-chatbot` framework integrators and contributors. Captures architecture patterns, model landscape, deployment characteristics, security frameworks, and emerging capabilities as of March 2026.
+
+> **Note on scope.** This is an external-ecosystem survey, not a roadmap or design document. Findings describe the broader industry; the framework's own architecture choices live in [`README.md`](../../README.md) and [`AGENT.md`](../../AGENT.md).
 
 ---
 
-## Key Findings Relevant to Our Strategy
+## Cost Data (LLM API pricing, March 2026)
 
-### Architecture Validation
-- **Knowledge Graph RAG beats Vector RAG:** 54.2% higher accuracy on multi-hop queries. Our TRUG approach is validated.
-- **Tiered escalation is mainstream:** 30-50% of traffic handled without LLM in mature deployments. Our Tier 0/1/2 architecture is not novel — but our structured graph enabling it IS novel.
-- **"Verification is the product"** — the industry has learned that generative AI without deterministic verification is unacceptable brand safety risk. Our graph-grounded approach is exactly this.
-
-### Competitive Positioning
-- **Model routing is standard:** 70% of queries to cheap models. Our tiered architecture does this structurally.
-- **Bot cost verified lower:** $0.50-$0.70 per bot interaction vs $8-$15 live agent (matches our pricing research).
-- **OWASP ASI Top 10 (2026):** New agentic security framework. Our probe system (#1145) should target these.
-- **80% of AI startups predicted to fail** — "thin wrappers" killed by foundation models. Our graph substrate is NOT a thin wrapper.
-
-### Technology to Watch
-- **MCP (Model Context Protocol):** Becoming standard for connecting agents to business systems.
-- **Hindsight memory architecture:** 4 separate networks (World, Experience, Opinion, Entity). 91.4% accuracy on LongMemEval. Relevant for SaltWind NPC memory.
-- **Proxilion SDK:** Deterministic input/output guards using regex — not LLM-based. Aligns with our Tier 0 pre-screening approach.
-- **"Intent Capsule" pattern:** Signed, immutable envelope binding agent's original mandate. Relevant for hard gate security.
-
-### Cost Data
 - Claude Opus 4.6: $5/$25 per 1M tokens (input/output)
 - Claude Sonnet 4.6: $3/$15 per 1M tokens
 - Gemini 3.1 Pro: $2/$12 per 1M tokens
 - At 25M tokens/month: Claude Opus ~$275, Sonnet ~$165, Gemini ~$125
 
-### SaltWind-Relevant Findings
-- **Multimodal chatbots standard:** 40% of GenAI solutions are multimodal. Game can accept voice, image input.
-- **Proactive engagement:** Chatbots initiating conversations based on behavior. NPCs should do this.
-- **Self-improving systems (Hindsight):** Agent evaluates own memories, learns preferences. NPC character development.
-- **Llama 4 Scout:** 10M token context, open-weights. Potential for local SaltWind server.
-
 ---
 
-## Full Research (Gemini Deep Research Output)
+## Full Research (Gemini Deep Research output)
 
-[Full 7-part research report preserved below for reference]
+The 7-part research report below is preserved verbatim from the source.
 
 ### Part 1: Architecture Patterns
 
