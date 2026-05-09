@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -61,16 +61,17 @@ jobs:
       - name: Install trugs-tools
         run: pip install trugs-tools
 
-      - name: trugs-folder-check
-        run: trugs-folder-check .
+      - name: tg check
+        run: tg check .
 
-  gitleaks:
-    name: gitleaks secrets scan
+  secrets-scan:
+    name: secrets scan (trufflehog)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
