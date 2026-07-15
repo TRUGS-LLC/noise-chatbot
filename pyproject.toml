@@ -101,8 +101,8 @@ no_implicit_optional = true
 show_error_codes = true
 files = ["src", "tests"]
 
-# Phase B scaffold: function bodies are NotImplementedError stubs.
-# Phase C fills them in. Relax a few rules that fire on stubs.
+# Relax missing-import rules for optional / untyped third-party deps
+# (noiseprotocol ships no type stubs; trugs_store is an optional extra).
 [[tool.mypy.overrides]]
 module = "noiseprotocol.*"
 ignore_missing_imports = true

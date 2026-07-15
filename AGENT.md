@@ -12,8 +12,8 @@ INTERFACE chatbot_server GOVERNS ALL RECORD Message FROM ENTRY client TO EXIT re
 
 A Python reimplementation of [`TRUGS-LLC/noise-chatbot`](https://github.com/TRUGS-LLC/noise-chatbot) (Go), regenerated from [`noise_chatbot.super.trug.json`](https://github.com/Xepayac/TRUGS-DEVELOPMENT/blob/main/REFERENCE/noise_chatbot.super.trug.json). The super-TRUG is the spec; this codebase is the implementation; the behaviour-parity corpus is the acceptance criteria.
 
-**Phase B (current):** scaffold — modules, types, contracts, `NotImplementedError` stubs.
-**Phase C:** implementation from super-TRUG (no reading Go source).
+**Phase B (complete):** scaffold — modules, types, contracts, `NotImplementedError` stubs.
+**Phase C (complete):** implementation from super-TRUG (no reading Go source) — shipped as v0.1.0; all 17 runnable parity fixtures pass.
 
 ## Navigation
 

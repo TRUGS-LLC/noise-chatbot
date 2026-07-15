@@ -2,7 +2,7 @@
   "name": "NOISE_CHATBOT_PYTHON Folder",
   "version": "0.1.0.dev0",
   "type": "PROJECT",
-  "description": "Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b). Python reimplementation of TRUGS-LLC/noise-chatbot (Go), regenerated from noise_chatbot.super.trug.json per the TRUG-driven rewrite methodology. Phase B scaffold — stubs raise NotImplementedError; Phase C fills them.",
+  "description": "Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b). Python reimplementation of TRUGS-LLC/noise-chatbot (Go), regenerated from noise_chatbot.super.trug.json per the TRUG-driven rewrite methodology. Phase C complete — implemented from the super-TRUG and released as v0.1.0; all 17 runnable parity fixtures pass.",
   "dimensions": {
     "folder_structure": {
       "description": "NOISE_CHATBOT_PYTHON components and structure",
@@ -112,8 +112,8 @@
       "properties": {
         "name": "src",
         "purpose": "Python source tree — mirrors the Go package layout (noise, protocol, server, client, helper, examples).",
-        "phase": "B-scaffold",
-        "implementation_status": "NotImplementedError stubs with TRL contracts"
+        "phase": "C-complete",
+        "implementation_status": "implemented from super-TRUG; all 17 runnable parity fixtures pass (v0.1.0)"
       },
       "parent_id": "noise_chatbot_python_folder",
       "contains": [],

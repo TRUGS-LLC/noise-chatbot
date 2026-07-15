@@ -4,9 +4,9 @@ Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAK
 
 Python reimplementation of [`TRUGS-LLC/noise-chatbot`](https://github.com/TRUGS-LLC/noise-chatbot) (Go), generated from [`noise_chatbot.super.trug.json`](https://github.com/Xepayac/TRUGS-DEVELOPMENT/blob/main/REFERENCE/noise_chatbot.super.trug.json) per the TRUG-driven rewrite methodology.
 
-**Status:** Phase B scaffold. Function bodies are `NotImplementedError` stubs. Phase C fills them from the super-TRUG without reading Go source.
+**Status:** v0.1.0 — released to PyPI. Phase C is complete: every function body is implemented from the super-TRUG (per the TRUG-driven rewrite methodology, without reading the Go source) and all 17 runnable parity fixtures pass.
 
-## Quickstart (future — after Phase C)
+## Quickstart
 
 ```python
 from noise_chatbot.server import Server
@@ -110,7 +110,7 @@ ruff check . && ruff format --check . && mypy src tests
 
 ## Parity
 
-Phase A of [issue #1555 in TRUGS-DEVELOPMENT](https://github.com/Xepayac/TRUGS-DEVELOPMENT/issues/1555) produced a 21-fixture YAML corpus that the Go implementation passes. This Python implementation is validated against the same corpus — Phase C is complete when all 17 runnable fixtures pass.
+Phase A of [issue #1555 in TRUGS-DEVELOPMENT](https://github.com/Xepayac/TRUGS-DEVELOPMENT/issues/1555) produced a 21-fixture YAML corpus that the Go implementation passes. This Python implementation is validated against the same corpus; Phase C completed with all 17 runnable fixtures passing.
 
 ## License
 
