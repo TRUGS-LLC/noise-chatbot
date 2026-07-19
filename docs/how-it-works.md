@@ -3,6 +3,31 @@
 A short, honest explanation of what this engine is — and, just as important, what it is
 **not**.
 
+## The bigger picture: a TRUGS substrate as an executable surface
+
+Zoom out first: this chatbot is one concrete demonstration of a more general pattern —
+**using a TRUGS substrate (a TRUG graph plus the code that runs it) as an executable
+surface.**
+
+TRL/TRUGS is designed to be an *executable* subset of English: every valid sentence
+compiles losslessly to a TRUG graph and back. Here the graph is not merely validated; it
+is **executed as a program**:
+
+- **The TRUG graph is the program.** Authored in TRL (or written directly as a TRUG),
+  gated by the published `trug` CLI.
+- **The code is the interpreter.** A small, domain-agnostic runtime that walks the graph
+  and drives execution — with an LLM demoted to a single constrained instruction per fork.
+- **Together they are an executable surface.** You express behavior in the substrate
+  (TRUGS/TRL), and it runs — no interpreter edits, no generated behavior. A behavior
+  change is a substrate edit that `trug validate` gates.
+
+The chatbot is the *application*; the reusable idea is the *surface*. The same
+substrate — a validated graph executed by generic interpreter code — can drive other
+applications (decision surfaces, guided flows, capability-gated procedures). **This
+repository is the first working proof that a TRUGS graph is not merely checkable but
+runnable.** The rest of this page is how that surface behaves in this particular
+application.
+
 ## The one idea: the graph is the program
 
 A corpus is a `trug validate`-VALID TRUG graph. The engine executes it as a program. It
@@ -77,7 +102,7 @@ no-hallucination property. That's the cost-decoupling thesis, demonstrated end-t
 (e.g. a 0.5B local model) will mis-route more often than a strong one — every such error
 is safe and located, but it's still the wrong answer. Picking a selection model is a
 quality/cost tradeoff, and **what size a realistic corpus actually needs is an open
-question under active evaluation** (see the model-sizing study issue). The 0.5B demo above
+question under active evaluation**. The 0.5B demo above
 proves the *safety* property on the smallest plausible hardware; it is **not** a claim
 that a 0.5B model routes *well*.
 
