@@ -1,0 +1,121 @@
+{
+  "name": "noise_chatbot_faq",
+  "version": "1.0.0",
+  "type": "PROJECT",
+  "dimension": "system",
+  "dimensions": {
+    "system": { "description": "Demo corpus 1 (D10): a dogfood FAQ about TRUGS and this chatbot." }
+  },
+  "nodes": [
+    {
+      "id": "root",
+      "type": "CONCEPT",
+      "parent_id": null,
+      "contains": ["what_is_trugs", "engine", "crypto", "root_none"],
+      "metric_level": "BASE_TOPIC",
+      "dimension": "system",
+      "properties": { "role": "branch", "corpus_schema_version": "1" }
+    },
+    {
+      "id": "what_is_trugs",
+      "type": "CONCEPT",
+      "parent_id": "root",
+      "contains": [],
+      "metric_level": "BASE_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "answer",
+        "menu_label": "What is TRUGS / TRL?",
+        "answer_text": "TRUGS/L (TRL) is a constrained, executable subset of English: every valid sentence compiles to a TRUG graph and back, losslessly. You write TRL to communicate and TRUGS (the JSON graph) to store, validate, and execute."
+      }
+    },
+    {
+      "id": "engine",
+      "type": "CONCEPT",
+      "parent_id": "root",
+      "contains": ["how_it_walks", "what_is_bottom", "why_no_hallucination", "engine_none"],
+      "metric_level": "BASE_TOPIC",
+      "dimension": "system",
+      "properties": { "role": "branch", "menu_label": "How does this answer engine work?" }
+    },
+    {
+      "id": "how_it_walks",
+      "type": "CONCEPT",
+      "parent_id": "engine",
+      "contains": [],
+      "metric_level": "CENTI_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "answer",
+        "menu_label": "How does it choose an answer?",
+        "answer_text": "The engine walks a trug-validated corpus as a program. At each fork it enumerates the legal child options and asks a bounded selection backend to pick exactly one. The pre-authored leaf is delivered verbatim, with its node-id path as a provenance address."
+      }
+    },
+    {
+      "id": "what_is_bottom",
+      "type": "CONCEPT",
+      "parent_id": "engine",
+      "contains": [],
+      "metric_level": "CENTI_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "answer",
+        "menu_label": "What happens when there is no good answer?",
+        "answer_text": "When no authored answer fits, the walk routes to the nearest authored bottom node and records a located gap for a human author. A miss is self-locating, never silently composed."
+      }
+    },
+    {
+      "id": "why_no_hallucination",
+      "type": "CONCEPT",
+      "parent_id": "engine",
+      "contains": [],
+      "metric_level": "CENTI_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "answer",
+        "menu_label": "Can it hallucinate?",
+        "answer_text": "No generation step exists between source and delivery: the model only selects among pre-authored options, and the answer is the authored leaf. A wrong selection is possible and self-locating; an invented answer is structurally impossible."
+      }
+    },
+    {
+      "id": "engine_none",
+      "type": "CONCEPT",
+      "parent_id": "engine",
+      "contains": [],
+      "metric_level": "CENTI_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "bottom",
+        "menu_label": "None of these engine questions",
+        "answer_text": "No authored answer covers that engine detail yet. This gap has been recorded for a human author."
+      }
+    },
+    {
+      "id": "crypto",
+      "type": "CONCEPT",
+      "parent_id": "root",
+      "contains": [],
+      "metric_level": "BASE_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "answer",
+        "menu_label": "Is the chat encrypted?",
+        "answer_text": "The live session runs over a Noise_IK channel (Curve25519 + ChaCha20-Poly1305 + BLAKE2b), so the request/response transport is encrypted. This is transport encryption for a live session, not a Signal-equivalent secure messenger."
+      }
+    },
+    {
+      "id": "root_none",
+      "type": "CONCEPT",
+      "parent_id": "root",
+      "contains": [],
+      "metric_level": "BASE_TOPIC",
+      "dimension": "system",
+      "properties": {
+        "role": "bottom",
+        "menu_label": "None of these / not sure",
+        "answer_text": "No authored answer covers that yet. This gap has been recorded for a human author, and the corpus can grow to cover it."
+      }
+    }
+  ],
+  "edges": []
+}

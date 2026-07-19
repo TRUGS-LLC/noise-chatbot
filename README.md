@@ -4,9 +4,9 @@ Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAK
 
 Python reimplementation of [`TRUGS-LLC/noise-chatbot`](https://github.com/TRUGS-LLC/noise-chatbot) (Go), generated from [`noise_chatbot.super.trug.json`](https://github.com/Xepayac/TRUGS-DEVELOPMENT/blob/main/REFERENCE/noise_chatbot.super.trug.json) per the TRUG-driven rewrite methodology.
 
-**Status:** Phase B scaffold. Function bodies are `NotImplementedError` stubs. Phase C fills them from the super-TRUG without reading Go source.
+**Status:** implemented and tested (the full suite runs green offline). Ships the encrypted-transport server/client plus the **V1 TRUG-traced answer engine** (below).
 
-## Quickstart (future — after Phase C)
+## Quickstart
 
 ```python
 from noise_chatbot.server import Server
@@ -16,6 +16,22 @@ s.on_chat(lambda text: "You said: " + text)
 print("Public key:", s.public_key())
 s.listen_and_serve()
 ```
+
+## The TRUG-traced answer engine (V1)
+
+A generic interpreter that executes a `trug validate`-VALID corpus as a program: **the graph is the program.** At each fork it enumerates the legal, session-gated options, a bounded selection backend picks exactly one, and the pre-authored leaf is delivered **verbatim** with its node-id path as a provenance address. There is no generation step between source and delivery, so a wrong selection is self-locating and an invented answer is structurally impossible; a miss routes to an authored ⊥ node and records a located gap. Every behavior derives from the corpus — a behavior change is a corpus edit, never an engine edit.
+
+```bash
+pip install "noise-chatbot[engine]"              # the corpus validate gate (trug CLI)
+pip install "noise-chatbot[engine,anthropic]"    # + the Anthropic forced-tool backend
+
+# run the REPL over the demo corpus (offline keyword backend)
+noise-chat examples/faq_demo/faq.trug.json
+# ...or the Anthropic backend (needs ANTHROPIC_API_KEY):
+noise-chat examples/faq_demo/faq.trug.json --backend anthropic
+```
+
+The **corpus schema is experimental** until 1.0 (it is public but not frozen; any change bumps `corpus_schema_version`). The contract lives in [`docs/corpus_schema.md`](docs/corpus_schema.md); the dogfood demo corpus is [`examples/faq_demo/`](examples/faq_demo/). The Anthropic backend defaults to the cheap `claude-haiku-4-5-20251001` tier (operator-overridable) — safety lives in the architecture (menu-membership enforcement + ⊥ routing), not the model tier. The engine is opt-in and additive: the base install stays dependency-free and the 0.1.0 API is untouched.
 
 ## Why Python
 
@@ -110,7 +126,7 @@ ruff check . && ruff format --check . && mypy src tests
 
 ## Parity
 
-Phase A of [issue #1555 in TRUGS-DEVELOPMENT](https://github.com/Xepayac/TRUGS-DEVELOPMENT/issues/1555) produced a 21-fixture YAML corpus that the Go implementation passes. This Python implementation is validated against the same corpus — Phase C is complete when all 17 runnable fixtures pass.
+Phase A of [issue #1555 in TRUGS-DEVELOPMENT](https://github.com/Xepayac/TRUGS-DEVELOPMENT/issues/1555) produced a 21-fixture YAML corpus that the Go implementation passes. This Python implementation is validated against the same corpus, and the runnable parity fixtures pass.
 
 ## License
 
