@@ -196,6 +196,40 @@ def _protected_root_bottom() -> dict[str, Any]:
     return doc
 
 
+def _parent_not_in_contains() -> dict[str, Any]:
+    doc = _valid_corpus()
+    # 'orphan' claims root as parent, but root.contains does not list it → disagreement
+    doc["nodes"].append(
+        {
+            "id": "orphan",
+            "type": "CONCEPT",
+            "parent_id": "root",
+            "contains": [],
+            "metric_level": "BASE_TOPIC",
+            "dimension": "system",
+            "properties": {"role": "answer", "menu_label": "Orphan", "answer_text": "x"},
+        }
+    )
+    return doc
+
+
+def _contains_child_with_wrong_parent() -> dict[str, Any]:
+    doc = _valid_corpus()
+    doc["nodes"][0]["contains"].append("stray")  # root lists 'stray'...
+    doc["nodes"].append(
+        {
+            "id": "stray",
+            "type": "CONCEPT",
+            "parent_id": "about",  # ...but 'stray' points at 'about', not root
+            "contains": [],
+            "metric_level": "BASE_TOPIC",
+            "dimension": "system",
+            "properties": {"role": "answer", "menu_label": "Stray", "answer_text": "x"},
+        }
+    )
+    return doc
+
+
 @pytest.mark.parametrize(
     ("name", "builder"),
     [
@@ -205,6 +239,8 @@ def _protected_root_bottom() -> dict[str, Any]:
         ("no-menu-label", _missing_menu_label),
         ("no-root-bottom", _no_root_bottom),
         ("protected-root-bottom", _protected_root_bottom),
+        ("parent-not-in-contains", _parent_not_in_contains),
+        ("contains-child-wrong-parent", _contains_child_with_wrong_parent),
     ],
 )
 def test_loader_refuses_invalid_corpus(

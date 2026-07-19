@@ -202,15 +202,27 @@ def load_corpus(path: str | Path, *, validator: Validator = trug_validate) -> Co
         raise CorpusSchemaError(f"corpus must have exactly one root, found {len(roots)}")
     root = roots[0]
 
-    # Referential integrity: every parent_id and every contained id must resolve.
+    # Referential + structural integrity: every link resolves AND parent_id agrees with
+    # contains both ways, so the walk's contains-descent equals the parent_id-ancestry the
+    # provenance address is built from (no divergent tree).
     for node in nodes.values():
         if node.parent_id is not None and node.parent_id not in nodes:
             raise CorpusSchemaError(
                 f"node {node.id!r} references unknown parent {node.parent_id!r}"
             )
+        if node.parent_id is not None and node.id not in nodes[node.parent_id].contains:
+            raise CorpusSchemaError(
+                f"node {node.id!r} has parent_id {node.parent_id!r}, but that parent does not "
+                f"list it in 'contains'"
+            )
         for child_id in node.contains:
             if child_id not in nodes:
                 raise CorpusSchemaError(f"node {node.id!r} contains unknown child {child_id!r}")
+            if nodes[child_id].parent_id != node.id:
+                raise CorpusSchemaError(
+                    f"node {node.id!r} lists {child_id!r} in 'contains', but its parent_id is "
+                    f"{nodes[child_id].parent_id!r}"
+                )
 
     # schema_version — required, from the root, matching the pinned contract version.
     root_props = _root_properties(raw_nodes, root.id)
