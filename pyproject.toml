@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "noise-chatbot"
-version = "0.1.0"
+version = "0.2.0"
 description = "Encrypted chatbot framework over Noise_IK (Curve25519 + ChaCha20-Poly1305 + BLAKE2b). Python reimplementation of TRUGS-LLC/noise-chatbot (Go), regenerated from noise_chatbot.super.trug.json per the TRUG-driven rewrite methodology."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -48,6 +48,11 @@ trugs = [
 engine = [
     "trugs-tools==2.1.0",
 ]
+# The Anthropic forced-tool-choice selection backend (ADR-003). MIT-licensed SDK,
+# Apache-2.0-compatible. Install with:  pip install noise-chatbot[anthropic]
+anthropic = [
+    "anthropic>=0.40,<1.0",
+]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
@@ -61,10 +66,14 @@ dev = [
     # ...and trugs-tools so the corpus loader's `trug validate` gate (and its tests)
     # have the CLI in CI without a separate install step (Phase 6 SP1).
     "trugs-tools==2.1.0",
+    # ...and the anthropic SDK so the backend's type-check and its fake-client tests
+    # run in CI (no network/key — the tests inject a fake client).
+    "anthropic>=0.40,<1.0",
 ]
 
 [project.scripts]
 noise-helper = "noise_chatbot.helper.main:main"
+noise-chat = "noise_chatbot.engine.repl:main"
 
 [project.urls]
 Homepage = "https://github.com/TRUGS-LLC/noise-chatbot"
