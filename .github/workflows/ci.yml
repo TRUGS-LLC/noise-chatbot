@@ -58,11 +58,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install trugs-tools
-        run: pip install trugs-tools
+      - name: Install trugs-tools + trugs-folder
+        run: pip install trugs-tools trugs-folder
 
-      - name: tg check
-        run: tg check .
+      - name: trug-a-folder check
+        run: trug-a-folder check .
 
   secrets-scan:
     name: secrets scan (trufflehog)
