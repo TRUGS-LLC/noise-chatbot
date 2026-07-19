@@ -3,7 +3,7 @@
 <trl>
 MODULE server CONTAINS FUNCTION default_classifier AND RECORD Classifier.
 FUNCTION Classifier SHALL MAP STRING user_text AS ARRAY node_ids.
-FUNCTION Classifier SHALL_NOT WRITE ANY STRING text.
+FUNCTION Classifier SHALL_NOT WRITE ANY STRING DATA text.
 </trl>
 """
 

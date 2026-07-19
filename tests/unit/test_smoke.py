@@ -15,7 +15,7 @@ def test_package_imports() -> None:
     """The top-level package imports cleanly."""
     mod = importlib.import_module("noise_chatbot")
     assert hasattr(mod, "__version__")
-    assert mod.__version__.startswith("0.1.0")
+    assert mod.__version__.startswith("0.2.0")
 
 
 # AGENT SHALL VALIDATE MODULE submodules.

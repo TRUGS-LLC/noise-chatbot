@@ -1,0 +1,29 @@
+% Demo corpus 1 (D10) — human-readable TRL source for the dogfood FAQ about TRUGS
+% and this chatbot. The executable artifact is faq.trug.json (trug validate-VALID);
+% this file is the readable companion. Each answer below is delivered verbatim by the
+% engine at its leaf, with the node-id path as a provenance address.
+
+PARTY user MAY ASK ABOUT TOPIC trugs OR TOPIC engine OR TOPIC crypto.
+
+% root → what_is_trugs (answer)
+PROCESS engine SHALL DELIVER ANSWER what_is_trugs
+  WHEN PARTY user ASK ABOUT TOPIC trugs.
+
+% root → engine (branch) → { how_it_walks, what_is_bottom, why_no_hallucination }
+PROCESS engine SHALL OFFER MENU engine
+  WHEN PARTY user ASK ABOUT TOPIC engine.
+PROCESS engine SHALL DELIVER ANSWER how_it_walks
+  WHEN PARTY user ASK ABOUT RECORD selection.
+PROCESS engine SHALL DELIVER ANSWER what_is_bottom
+  WHEN PARTY user ASK ABOUT RECORD bottom.
+PROCESS engine SHALL DELIVER ANSWER why_no_hallucination
+  WHEN PARTY user ASK ABOUT RECORD hallucination.
+
+% root → crypto (answer) — honest transport-scope claim, never Signal-parity
+PROCESS engine SHALL DELIVER ANSWER crypto
+  WHEN PARTY user ASK ABOUT TOPIC crypto.
+
+% Every menu falls through to an authored bottom (root_none / engine_none): a miss is
+% located and recorded, never silently composed.
+PROCESS engine SHALL RETURN RECORD bottom_route
+  WHEN PARTY user ASK ABOUT ANY OTHER TOPIC.
