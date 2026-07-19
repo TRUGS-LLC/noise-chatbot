@@ -42,6 +42,12 @@ dependencies = [
 trugs = [
     "trugs-store>=0.1.0",
 ]
+# The TRUG-traced answer engine's corpus validate gate (ADR-001) shells out to the
+# published `trug` CLI. Pinned exactly (D1) — the engine gates on precisely the command
+# corpus authors run by hand. Install with:  pip install noise-chatbot[engine]
+engine = [
+    "trugs-tools==2.1.0",
+]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
@@ -52,6 +58,9 @@ dev = [
     # The dev extra pulls trugs-store in so the full test suite (including
     # tests/unit/test_stores_trugs.py) runs against the adapter.
     "trugs-store>=0.1.0",
+    # ...and trugs-tools so the corpus loader's `trug validate` gate (and its tests)
+    # have the CLI in CI without a separate install step (Phase 6 SP1).
+    "trugs-tools==2.1.0",
 ]
 
 [project.scripts]
