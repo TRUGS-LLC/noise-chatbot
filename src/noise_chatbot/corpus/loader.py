@@ -225,11 +225,15 @@ def load_corpus(path: str | Path, *, validator: Validator = trug_validate) -> Co
             f"(this engine supports {CORPUS_SCHEMA_VERSION!r})"
         )
 
-    # root_bottom — at least one bottom node is a direct child of the root (C4 totality).
-    if not any(nodes[cid].role == ROLE_BOTTOM for cid in root.contains):
+    # root_bottom — at least one UNPROTECTED bottom node is a direct child of the root, so
+    # the ⊥ retry chain terminates at a floor accessible to *every* session (C4 totality).
+    if not any(
+        nodes[cid].role == ROLE_BOTTOM and not nodes[cid].protected for cid in root.contains
+    ):
         raise CorpusSchemaError(
-            f"corpus has no root_bottom — the root {root.id!r} needs at least one "
-            f"direct child with role {ROLE_BOTTOM!r} so ⊥ routing is total"
+            f"corpus has no unprotected root_bottom — the root {root.id!r} needs at least one "
+            f"direct child with role {ROLE_BOTTOM!r} and no 'protected' marker, so ⊥ routing "
+            f"terminates at a floor accessible to every session"
         )
 
     return Corpus(schema_version=str(version), root_id=root.id, nodes=nodes)

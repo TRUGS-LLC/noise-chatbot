@@ -39,7 +39,7 @@ unknown or missing role is **INVALID at load** (the role gate).
 | `properties.menu_label` (**every non-root node**) | the text the enumerator shows when this node appears as a menu option. Required on **every** selectable node — branch, answer, bottom, and procedure alike — so the enumerator never invents a label. Missing on a non-root node → refused |
 | **`branch`** | a fork: `menu_label` is its subtree prompt; children listed via `contains` |
 | **`answer`** | a leaf: `properties.answer_text` is delivered **verbatim**; the provenance address is the node-id path from root |
-| **`bottom`** | the authored ⊥ floor (the no-answer route): `menu_label` + `answer_text`, flagged `role: bottom`. **At least one bottom node MUST be a direct child of the root** (`root_bottom`) so the retry-exhaustion chain always terminates |
+| **`bottom`** | the authored ⊥ floor (the no-answer route): `menu_label` + `answer_text`, flagged `role: bottom`. **At least one _unprotected_ bottom node MUST be a direct child of the root** (`root_bottom`) so the retry-exhaustion chain always terminates at a floor **every session can reach** (deeper bottoms may be `protected`; the root floor may not) |
 | **`procedure`** | **reserved, never executed in V1** (out of scope). The loader accepts it, the enumerator lists it, the executor refuses it (fail-honest ⊥ shape). V2 provisioning |
 | `properties.protected` | optional bool: marks a capability-gated subtree — the enumerator excludes it for sessions lacking the capability. **Orthogonal to `role`, not a role value** |
 | `edges` | optional cross-links; the V1 walk follows `contains` only — edges are advisory metadata |
@@ -48,8 +48,10 @@ unknown or missing role is **INVALID at load** (the role gate).
 
 On `RETRY BOUNDED 1` exhaustion (a backend that returns an off-menu id twice), the
 engine routes to the **nearest-ancestor bottom** — the bottom child of the deepest
-ancestor of the current cursor that has one, falling back to the mandatory `root_bottom`.
-The written gap record's `kind` is:
+ancestor of the current cursor that has one **and that the session may access**
+(a `protected` bottom the session lacks is skipped), falling back to the mandatory
+unprotected `root_bottom`. The delivered answer's provenance address is the bottom's own
+root→node path. The written gap record's `kind` is:
 
 - **`deep-⊥`** — a non-root bottom absorbed the miss, or
 - **`root-⊥`** — the `root_bottom` did.

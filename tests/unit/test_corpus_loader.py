@@ -189,6 +189,13 @@ def _no_root_bottom() -> dict[str, Any]:
     return doc
 
 
+def _protected_root_bottom() -> dict[str, Any]:
+    doc = _valid_corpus()
+    # the only root_bottom is protected → no session-accessible floor → refused (C4)
+    doc["nodes"][2]["properties"]["protected"] = True
+    return doc
+
+
 @pytest.mark.parametrize(
     ("name", "builder"),
     [
@@ -197,6 +204,7 @@ def _no_root_bottom() -> dict[str, Any]:
         ("missing-role", _missing_role),
         ("no-menu-label", _missing_menu_label),
         ("no-root-bottom", _no_root_bottom),
+        ("protected-root-bottom", _protected_root_bottom),
     ],
 )
 def test_loader_refuses_invalid_corpus(

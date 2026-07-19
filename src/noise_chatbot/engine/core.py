@@ -117,11 +117,11 @@ class Engine:
         while True:
             menu = self._enumerate(cursor.id, active)
             if not menu:
-                return self._deliver_leaf(cursor, path, trace, query)
+                return self._deliver_leaf(cursor, path, trace, query, active)
             chosen, attempts = self._select(query, menu)
             trace.visit(cursor.id, tuple(option.node_id for option in menu), attempts)
             if chosen is None:
-                return self._route_bottom(cursor, path, trace, query, reason="off-menu")
+                return self._route_bottom(cursor, path, trace, query, active, reason="off-menu")
             cursor = self._corpus.node(chosen)
             path.append(cursor.id)
 
@@ -151,7 +151,7 @@ class Engine:
     # ── delivery ───────────────────────────────────────────────────────────────
 
     def _deliver_leaf(
-        self, node: CorpusNode, path: list[str], trace: TraceLog, query: str
+        self, node: CorpusNode, path: list[str], trace: TraceLog, query: str, session: Session
     ) -> Answer:
         if node.role == ROLE_ANSWER:
             return Answer(
@@ -162,13 +162,14 @@ class Engine:
                 trace=trace,
             )
         if node.role == ROLE_BOTTOM:
-            # a bottom reached directly by selection — the fork above it missed
+            # a bottom reached directly by selection — the fork above it missed. It was on
+            # the menu, so it is session-accessible; its ancestry path is contiguous.
             return self._deliver_bottom(node, tuple(path), trace, query, reason="authored-bottom")
         if node.role == ROLE_PROCEDURE:
             # OUT-OF-SCOPE (V2): the executor refuses procedure leaves — fail-honest ⊥
-            return self._route_bottom(node, path, trace, query, reason="procedure-refused")
+            return self._route_bottom(node, path, trace, query, session, reason="procedure-refused")
         # a branch with no accessible children — no authored answer lives here
-        return self._route_bottom(node, path, trace, query, reason="no-accessible-options")
+        return self._route_bottom(node, path, trace, query, session, reason="no-accessible-options")
 
     def _deliver_bottom(
         self, bottom: CorpusNode, path: tuple[str, ...], trace: TraceLog, query: str, *, reason: str
@@ -185,14 +186,23 @@ class Engine:
         )
 
     def _route_bottom(
-        self, from_node: CorpusNode, path: list[str], trace: TraceLog, query: str, *, reason: str
+        self,
+        from_node: CorpusNode,
+        path: list[str],
+        trace: TraceLog,
+        query: str,
+        session: Session,
+        *,
+        reason: str,
     ) -> Answer:
-        bottom = self._nearest_bottom(from_node.id)
-        address = tuple(path) if path and path[-1] == bottom.id else (*path, bottom.id)
+        bottom = self._nearest_bottom(from_node.id, session)
+        # The provenance address is the delivered node's own root→node descent — a real
+        # corpus path — not the death-node path with the bottom grafted on (which would
+        # fabricate a parent→child edge when the ⊥ lives on an ancestor, not the cursor).
         gap = self._locate_gap(from_node.id, query, self._kind_of(bottom), reason)
         return Answer(
             text=self._answer_text(bottom),
-            address=address,
+            address=self._path_to(bottom.id),
             is_bottom=True,
             gap=gap,
             trace=trace,
@@ -200,20 +210,32 @@ class Engine:
 
     # ── ⊥ routing ──────────────────────────────────────────────────────────────
 
-    def _nearest_bottom(self, node_id: str) -> CorpusNode:
-        """The bottom child of the deepest ancestor of ``node_id`` that has one.
+    def _nearest_bottom(self, node_id: str, session: Session) -> CorpusNode:
+        """The nearest-ancestor bottom ``node_id`` can route to, honoring the session.
 
-        Total by construction — the loader guarantees a ``root_bottom`` (C4).
+        Climbs from ``node_id`` to the root, returning the first bottom child the session
+        may access — a protected ⊥ the session lacks is skipped, never leaked. Total by
+        construction: the loader guarantees an **unprotected** ``root_bottom`` (C4), so an
+        accessible floor always exists for every session.
         """
         current: str | None = node_id
         while current is not None:
             for child in self._corpus.children(current):
-                if child.role == ROLE_BOTTOM:
+                if child.role == ROLE_BOTTOM and session.grants(child):
                     return child
             current = self._corpus.node(current).parent_id
-        raise EngineError(  # pragma: no cover — loader's root_bottom requirement prevents this
-            "no reachable bottom node — corpus lacks a root_bottom"
+        raise EngineError(  # pragma: no cover — the unprotected root_bottom requirement prevents this
+            "no session-accessible bottom node — corpus lacks an unprotected root_bottom"
         )
+
+    def _path_to(self, node_id: str) -> tuple[str, ...]:
+        """The root→``node_id`` descent path (the node's ancestry, root first)."""
+        chain: list[str] = []
+        current: str | None = node_id
+        while current is not None:
+            chain.append(current)
+            current = self._corpus.node(current).parent_id
+        return tuple(reversed(chain))
 
     def _kind_of(self, bottom: CorpusNode) -> str:
         return KIND_ROOT_BOTTOM if bottom.parent_id == self._corpus.root_id else KIND_DEEP_BOTTOM
