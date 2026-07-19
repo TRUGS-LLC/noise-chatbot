@@ -21,6 +21,8 @@ s.listen_and_serve()
 
 A generic interpreter that executes a `trug validate`-VALID corpus as a program: **the graph is the program.** At each fork it enumerates the legal, session-gated options, a bounded selection backend picks exactly one, and the pre-authored leaf is delivered **verbatim** with its node-id path as a provenance address. There is no generation step between source and delivery, so a wrong selection is self-locating and an invented answer is structurally impossible; a miss routes to an authored ⊥ node and records a located gap. Every behavior derives from the corpus — a behavior change is a corpus edit, never an engine edit.
 
+> **The model picks answers; it does not write them.** A human authors the corpus; the LLM makes one constrained, multiple-choice selection per fork. See [`docs/how-it-works.md`](docs/how-it-works.md) for what that does and doesn't guarantee (including why it can't hallucinate, and why routing *quality* is a separate axis from routing *safety*).
+
 ```bash
 pip install "noise-chatbot[engine]"              # the corpus validate gate (trug CLI)
 pip install "noise-chatbot[engine,anthropic]"    # + the Anthropic forced-tool backend
