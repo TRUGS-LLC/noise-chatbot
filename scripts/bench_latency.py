@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from datetime import date
 from pathlib import Path
@@ -46,9 +47,9 @@ QUERIES = [
 
 
 def _percentile(samples_ms: list[float], pct: float) -> float:
-    """Nearest-rank percentile in milliseconds (integer rank)."""
+    """Nearest-rank percentile in milliseconds (ceil rank, 1-indexed)."""
     ordered = sorted(samples_ms)
-    rank = max(1, min(len(ordered), round((pct / 100.0) * len(ordered) + 0.5)))
+    rank = max(1, min(len(ordered), math.ceil((pct / 100.0) * len(ordered))))
     return ordered[rank - 1]
 
 
