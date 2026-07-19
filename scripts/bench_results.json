@@ -1,0 +1,14 @@
+{
+  "schema": "bench_results.v1",
+  "corpus": "examples/faq_demo/faq.trug.json",
+  "date": "2026-07-18",
+  "backends": {
+    "anthropic": {
+      "p50_ms": 1167,
+      "p95_ms": 2842,
+      "p99_ms": 3396,
+      "n": 30
+    },
+    "local": null
+  }
+}
