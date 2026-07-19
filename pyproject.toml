@@ -53,6 +53,13 @@ engine = [
 anthropic = [
     "anthropic>=0.40,<1.0",
 ]
+# The local grammar-constrained selection backend (B3 / D4) — GBNF enum over a GGUF model.
+# MIT-licensed, Apache-2.0-compatible. Not in `dev` (it compiles C++, so CI stays offline
+# and weight-free); the grammar builder is unit-tested without it. Install with:
+#   pip install noise-chatbot[local]
+local = [
+    "llama-cpp-python>=0.3,<0.4",
+]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
@@ -135,6 +142,12 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "yaml.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# llama-cpp-python is the [local] extra — not installed in dev/CI (it compiles C++),
+# so its imports (lazy, in engine/select/local.py) are untyped here.
+module = "llama_cpp.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
