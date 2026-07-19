@@ -102,7 +102,7 @@ no-hallucination property. That's the cost-decoupling thesis, demonstrated end-t
 (e.g. a 0.5B local model) will mis-route more often than a strong one — every such error
 is safe and located, but it's still the wrong answer. Picking a selection model is a
 quality/cost tradeoff, and **what size a realistic corpus actually needs is an open
-question under active evaluation** (see the model-sizing study issue). The 0.5B demo above
+question under active evaluation**. The 0.5B demo above
 proves the *safety* property on the smallest plausible hardware; it is **not** a claim
 that a 0.5B model routes *well*.
 
