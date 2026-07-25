@@ -41,6 +41,10 @@ class Message:
     payload: dict[str, Any] = field(default_factory=dict)
     id: str = ""
     reply_to: str = ""
+    # Out-of-band walk provenance {corpus_digest, address} for a TRUG-engine CHAT answer (AAA #69
+    # SP-C, B3). Optional + omitempty (mirrors reply_to): absent bytes on the wire when unset, so
+    # a Go/legacy client that doesn't know the key simply ignores it and parity fixtures stay green.
+    provenance: dict[str, Any] | None = None
 
     # FUNCTION to_json SHALL MAP RECORD.
     def to_json(self) -> str:
@@ -60,6 +64,8 @@ class Message:
         }
         if self.reply_to:
             doc["reply_to"] = self.reply_to
+        if self.provenance is not None:
+            doc["provenance"] = self.provenance
         return json.dumps(doc)
 
     # FUNCTION from_json SHALL MAP DATA.
@@ -82,4 +88,5 @@ class Message:
             payload=doc.get("payload", {}),
             id=doc.get("id", ""),
             reply_to=doc.get("reply_to", ""),
+            provenance=doc.get("provenance"),
         )
