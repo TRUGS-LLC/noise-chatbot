@@ -121,7 +121,7 @@ def test_replaying_recorded_choices_reproduces_answer(tmp_path: Path) -> None:
     assert replay.text == first.text
     assert replay.address == first.address
     assert replay.is_bottom == first.is_bottom
-    assert first.trace.trace_schema_version == "1"
+    assert first.trace.trace_schema_version == "2"  # SP-B: self-contained v2 trace (forced edit)
     assert first.trace.corpus_schema_version == "1"
 
 
