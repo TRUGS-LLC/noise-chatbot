@@ -147,6 +147,47 @@ def test_with_classifier_registers_primary() -> None:
     assert s._classifier is cls
 
 
+def test_engine_adapter_provenance_rides_the_chat_response(tmp_path: Path) -> None:
+    """SP-C: the server writes {corpus_digest, address} provenance on the engine-answered CHAT."""
+    from noise_chatbot.engine import Engine
+    from noise_chatbot.engine.adapter import as_classifier
+    from noise_chatbot.protocol.message import Message
+    from tests.unit._engine_helpers import faq_corpus
+    from tests.unit.test_wire_provenance import _FirstSelector
+
+    corpus = faq_corpus(tmp_path)
+    server = (
+        Server("127.0.0.1:0")
+        .with_responses([ResponseNode(id="about", keywords=["about"], response="A")])
+        .with_classifier(as_classifier(Engine(corpus, _FirstSelector())))
+    )
+    server._guardrails = []  # isolate the response path (the engine adapter ignores node lists)
+    resp, matched, _hit = server._handle_message_full(
+        Message(type="CHAT", payload={"text": "hi"}, id="m1"), 0
+    )
+    assert matched == ["about"]
+    assert resp.provenance is not None
+    assert resp.provenance["corpus_digest"] == corpus.corpus_digest
+    assert resp.provenance["address"] == ["root", "topics", "about"]
+    assert resp.provenance["address"][-1] == matched[0]  # RT-2: wire leaf == delivered leaf
+    assert "provenance" in resp.to_json()
+
+
+def test_keyword_classifier_leaves_provenance_unset(tmp_path: Path) -> None:
+    """A non-engine (keyword) classifier carries no provenance — omitted on the wire (parity-safe)."""
+    from noise_chatbot.protocol.message import Message
+
+    server = Server("127.0.0.1:0").with_responses(
+        [ResponseNode(id="about", keywords=["hi"], response="A")]
+    )
+    server._guardrails = []
+    resp, _matched, _hit = server._handle_message_full(
+        Message(type="CHAT", payload={"text": "hi"}, id="m1"), 0
+    )
+    assert resp.provenance is None
+    assert "provenance" not in resp.to_json()
+
+
 # AGENT SHALL VALIDATE PROCESS public_key_matches_key.
 def test_public_key_matches_key() -> None:
     """``public_key()`` returns a 64-char hex encoding of ``key().public``."""

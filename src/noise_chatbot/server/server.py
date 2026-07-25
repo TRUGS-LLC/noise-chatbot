@@ -751,6 +751,7 @@ class Server:
         self, msg: Message, question_count: int
     ) -> tuple[Message, list[str], bool]:
         """Core routing. Returns (response, matched_ids, hit_guardrail)."""
+        from noise_chatbot.engine.adapter import provenance_of
         from noise_chatbot.server.classifier import default_classifier
 
         if self._msg_handler is not None:
@@ -762,6 +763,7 @@ class Server:
             response_text = ""
             matched_nodes: list[str] = []
             hit_guardrail = False
+            provenance: dict[str, Any] | None = None  # out-of-band walk provenance (SP-C)
 
             if self._guardrails:
                 guard_ids = classify(user_text, self._guardrails)
@@ -775,12 +777,17 @@ class Server:
 
             if not response_text and self._responses:
                 node_ids = classify(user_text, self._responses)
+                # The delivered answer's provenance rides out-of-band (engine adapter only; a
+                # non-engine classifier returns None) — bound to THIS walk (RT-2: address[-1] is
+                # the delivered leaf id == the trace terminal).
+                provenance = provenance_of(classify)
                 if (
                     not node_ids
                     and self._fallback_classifier is not None
                     and question_count <= _WIND_DOWN_START
                 ):
                     node_ids = self._fallback_classifier(user_text, self._responses)
+                    provenance = None  # answer came from the keyword fallback, not the engine walk
                 if len(node_ids) > _MATCH_CAP:
                     node_ids = node_ids[:_MATCH_CAP]
                 matched_nodes = node_ids
@@ -810,6 +817,7 @@ class Server:
                     payload={"text": formatted},
                     id=str(uuid.uuid4()),
                     reply_to=msg.id,
+                    provenance=provenance,
                 ),
                 matched_nodes,
                 hit_guardrail,
