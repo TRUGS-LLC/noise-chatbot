@@ -125,6 +125,8 @@ noise-chat examples/faq_demo/faq.trug.json --backend anthropic   # needs ANTHROP
 
 ## See also
 
+- [`docs/security.md`](security.md) — the security model: the executional-integrity
+  property, the layered mechanisms that warrant it, and the honest limits.
 - [`docs/corpus_schema.md`](corpus_schema.md) — the corpus contract (node roles, ⊥
   routing, versioning).
 - [`examples/faq_demo/`](../examples/faq_demo/) — the demo corpus this page's examples use.
