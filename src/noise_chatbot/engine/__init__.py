@@ -15,6 +15,7 @@ and delivery.
 from __future__ import annotations
 
 from noise_chatbot.engine.core import Answer, Engine, EngineError
+from noise_chatbot.engine.legal_menu import legal_menu
 from noise_chatbot.engine.select import (
     KeywordSelector,
     Menu,
@@ -28,6 +29,7 @@ from noise_chatbot.engine.trace import (
     TraceAttempt,
     TraceLog,
     TraceStep,
+    TraceTerminal,
 )
 
 __all__ = [
@@ -44,4 +46,6 @@ __all__ = [
     "TraceAttempt",
     "TraceLog",
     "TraceStep",
+    "TraceTerminal",
+    "legal_menu",
 ]

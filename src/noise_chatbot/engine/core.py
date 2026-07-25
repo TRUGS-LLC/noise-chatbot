@@ -34,6 +34,7 @@ from noise_chatbot.corpus import (
     Corpus,
     CorpusNode,
 )
+from noise_chatbot.engine.legal_menu import legal_menu
 from noise_chatbot.engine.select.port import Menu, MenuOption, Selector
 from noise_chatbot.engine.session import Session
 from noise_chatbot.engine.trace import TraceAttempt, TraceLog
@@ -110,7 +111,14 @@ class Engine:
         </trl>
         """
         active = session if session is not None else Session.anonymous()
-        trace = TraceLog(corpus_schema_version=self._corpus.schema_version)
+        # The trace is a self-contained, third-party-checkable record (SP-B): bind it to the
+        # corpus content identity (SP-A) and record the session grant-set that gates every menu
+        # (B5, sorted for a stable record). The terminal leaf is recorded at delivery (B4).
+        trace = TraceLog(
+            corpus_schema_version=self._corpus.schema_version,
+            corpus_digest=self._corpus.corpus_digest,
+            grants=tuple(sorted(active.capabilities)),
+        )
         cursor = self._corpus.root
         path: list[str] = [cursor.id]
 
@@ -128,12 +136,12 @@ class Engine:
     # ── enumeration (session-gated) ────────────────────────────────────────────
 
     def _enumerate(self, node_id: str, session: Session) -> list[MenuOption]:
-        """Legal moves at ``node_id`` — children, with protected ones the session lacks excluded."""
-        return [
-            MenuOption(node_id=child.id, menu_label=child.menu_label or child.id)
-            for child in self._corpus.children(node_id)
-            if session.grants(child)
-        ]
+        """Legal moves at ``node_id`` — delegates to the public ``legal_menu`` oracle.
+
+        One source of truth (ADR-004, B6): the engine's gate and the checker's gate
+        (``verify_trace``, SP-E) are the *same* function, so they cannot drift.
+        """
+        return legal_menu(self._corpus, node_id, session)
 
     # ── selection (validate → RETRY BOUNDED 1) ─────────────────────────────────
 
@@ -154,6 +162,7 @@ class Engine:
         self, node: CorpusNode, path: list[str], trace: TraceLog, query: str, session: Session
     ) -> Answer:
         if node.role == ROLE_ANSWER:
+            trace.terminate(node.id, is_bottom=False)  # B4 — the delivered leaf (id, not text)
             return Answer(
                 text=self._answer_text(node),
                 address=tuple(path),
@@ -177,6 +186,7 @@ class Engine:
         kind = self._kind_of(bottom)
         death_node = bottom.parent_id if bottom.parent_id is not None else bottom.id
         gap = self._locate_gap(death_node, query, kind, reason)
+        trace.terminate(bottom.id, is_bottom=True)  # B4 — delivered ⊥ leaf (address[-1])
         return Answer(
             text=self._answer_text(bottom),
             address=path,
@@ -200,6 +210,7 @@ class Engine:
         # corpus path — not the death-node path with the bottom grafted on (which would
         # fabricate a parent→child edge when the ⊥ lives on an ancestor, not the cursor).
         gap = self._locate_gap(from_node.id, query, self._kind_of(bottom), reason)
+        trace.terminate(bottom.id, is_bottom=True)  # B4 — routed-⊥ leaf, address[-1] == bottom.id
         return Answer(
             text=self._answer_text(bottom),
             address=self._path_to(bottom.id),
