@@ -46,7 +46,7 @@ trugs = [
 # published `trug` CLI. Pinned exactly (D1) — the engine gates on precisely the command
 # corpus authors run by hand. Install with:  pip install noise-chatbot[engine]
 engine = [
-    "trugs-tools==2.1.0",
+    "trugs-tools==2.1.1",
 ]
 # The Anthropic forced-tool-choice selection backend (ADR-003). MIT-licensed SDK,
 # Apache-2.0-compatible. Install with:  pip install noise-chatbot[anthropic]
@@ -72,7 +72,7 @@ dev = [
     "trugs-store>=0.1.0",
     # ...and trugs-tools so the corpus loader's `trug validate` gate (and its tests)
     # have the CLI in CI without a separate install step (Phase 6 SP1).
-    "trugs-tools==2.1.0",
+    "trugs-tools==2.1.1",
     # ...and the anthropic SDK so the backend's type-check and its fake-client tests
     # run in CI (no network/key — the tests inject a fake client).
     "anthropic>=0.40,<1.0",
@@ -134,6 +134,12 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "trugs_store.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# trugs-tools (the corpus_digest / trug-validate substrate lib, #69 SP-A) ships no
+# py.typed marker — untyped like the sibling trugs_store dep above.
+module = "trugs_tools.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

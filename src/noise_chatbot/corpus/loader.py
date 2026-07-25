@@ -25,6 +25,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from trugs_tools.digest import digest as content_digest
+
 from noise_chatbot.corpus.errors import (
     CorpusError,
     CorpusSchemaError,
@@ -80,13 +82,18 @@ class Corpus:
     """A parsed, validated corpus — the program the engine executes.
 
     <trl>
-    DEFINE RECORD Corpus CONTAINS RECORD schema_version AND RECORD root AND ARRAY nodes.
+    DEFINE RECORD Corpus CONTAINS RECORD schema_version AND RECORD root AND ARRAY nodes AND RECORD corpus_digest.
     </trl>
     """
 
     schema_version: str
     root_id: str
     nodes: dict[str, CorpusNode]
+    # tci1-sha256 artifact_identity (L1) of the parsed corpus document — the substrate's
+    # order-invariant content identity (AAA #65 / #69 SP-A, ADR-001). Identity-bearing,
+    # unlike the identity-free schema_version. Defaults "" so hand-built Corpus stays valid;
+    # load_corpus always populates it. Set once at construction (frozen) — never mutated.
+    corpus_digest: str = ""
 
     def node(self, node_id: str) -> CorpusNode:
         """Return the node with ``node_id`` (raises ``KeyError`` if unknown)."""
@@ -248,7 +255,17 @@ def load_corpus(path: str | Path, *, validator: Validator = trug_validate) -> Co
             f"terminates at a floor accessible to every session"
         )
 
-    return Corpus(schema_version=str(version), root_id=root.id, nodes=nodes)
+    # Derive the corpus content identity once, at load, from the parsed document — the
+    # tci1-sha256 artifact_identity (L1), computed on the same document the `trug validate`
+    # gate already admitted (#69 SP-A / ADR-001). Corpus stays frozen: the digest is set at
+    # construction, never mutated (INVARIANT engine SHALL_NOT UPDATE corpus).
+    corpus_digest = content_digest(document)
+    return Corpus(
+        schema_version=str(version),
+        root_id=root.id,
+        nodes=nodes,
+        corpus_digest=corpus_digest,
+    )
 
 
 def _root_properties(raw_nodes: list[object], root_id: str) -> dict[str, object]:
