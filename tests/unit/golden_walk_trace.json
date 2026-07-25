@@ -1,0 +1,39 @@
+{
+  "corpus_schema_version": "1",
+  "trace_schema_version": "2",
+  "corpus_digest": "tci1-sha256-4d8d87448a2863495943b828af1f626b9b3ff20b38667ccdc4836f06b84cb5fa",
+  "grants": [],
+  "terminal": {
+    "leaf_id": "about",
+    "is_bottom": false
+  },
+  "steps": [
+    {
+      "cursor_id": "root",
+      "menu_ids": [
+        "topics",
+        "root_none"
+      ],
+      "attempts": [
+        {
+          "choice": "topics",
+          "legal": true
+        }
+      ]
+    },
+    {
+      "cursor_id": "topics",
+      "menu_ids": [
+        "about",
+        "deep_none",
+        "proc"
+      ],
+      "attempts": [
+        {
+          "choice": "about",
+          "legal": true
+        }
+      ]
+    }
+  ]
+}

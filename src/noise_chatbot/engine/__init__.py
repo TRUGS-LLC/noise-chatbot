@@ -31,6 +31,7 @@ from noise_chatbot.engine.trace import (
     TraceStep,
     TraceTerminal,
 )
+from noise_chatbot.engine.verify import Verdict, verify_trace
 
 __all__ = [
     "TRACE_SCHEMA_VERSION",
@@ -47,5 +48,7 @@ __all__ = [
     "TraceLog",
     "TraceStep",
     "TraceTerminal",
+    "Verdict",
     "legal_menu",
+    "verify_trace",
 ]
